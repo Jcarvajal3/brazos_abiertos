@@ -24,7 +24,7 @@
 			<a href="/" class="logo" aria-label="Brazos Abiertos con Venezuela — Inicio">
 				<div class="logo-icon">
 					<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="40" height="40">
-						<rect width="40" height="40" rx="10" fill="#090910"/>
+						<rect width="40" height="40" rx="10" fill="#ffffff"/>
 						<path d="M6 24C6 14 13 11 20 11C27 11 34 14 34 24" stroke="url(#h1)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
 						<path d="M20 28L13 21C11 19 11 16 13 14C15 12 18 13 20 15C22 13 25 12 27 14C29 16 29 19 27 21Z" fill="url(#h2)"/>
 						<defs>
@@ -120,14 +120,16 @@
 		transition:
 			background var(--duration-normal) var(--ease-out),
 			border-color var(--duration-normal) var(--ease-out),
+			box-shadow var(--duration-normal) var(--ease-out),
 			backdrop-filter var(--duration-normal) var(--ease-out);
 	}
 
 	.site-header.scrolled {
-		background: rgba(9, 9, 16, 0.88);
+		background: rgba(255, 255, 255, 0.95);
 		backdrop-filter: blur(16px);
 		-webkit-backdrop-filter: blur(16px);
-		border-color: var(--border-subtle);
+		border-color: rgba(0, 0, 0, 0.08);
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 	}
 
 	.nav {
@@ -151,6 +153,7 @@
 		border-radius: 10px;
 		overflow: hidden;
 		flex-shrink: 0;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 	}
 
 	.logo-text {
@@ -163,7 +166,7 @@
 		font-family: var(--font-display);
 		font-size: var(--text-base);
 		font-weight: 800;
-		color: var(--text-primary);
+		color: #1a1a2e;
 		letter-spacing: -0.02em;
 	}
 
@@ -171,7 +174,7 @@
 		font-family: var(--font-body);
 		font-size: var(--text-xs);
 		font-weight: 400;
-		color: var(--text-muted);
+		color: #9ca3af;
 	}
 
 	/* Nav Links */
@@ -190,7 +193,7 @@
 		border-radius: var(--radius-md);
 		font-size: var(--text-sm);
 		font-weight: 500;
-		color: var(--text-secondary);
+		color: #4a5568;
 		text-decoration: none;
 		transition:
 			color var(--duration-fast) var(--ease-out),
@@ -198,13 +201,13 @@
 	}
 
 	.nav-link:hover {
-		color: var(--text-primary);
-		background: rgba(255, 255, 255, 0.06);
+		color: #1a1a2e;
+		background: rgba(0, 0, 0, 0.04);
 	}
 
 	.nav-link.active {
-		color: var(--color-accent);
-		background: rgba(251, 191, 36, 0.08);
+		color: var(--orange-500);
+		background: rgba(255, 92, 16, 0.08);
 	}
 
 	/* Actions */
@@ -229,28 +232,28 @@
 		height: 2.25rem;
 		padding: 0.4rem;
 		border-radius: var(--radius-md);
-		background: rgba(255, 255, 255, 0.06);
+		background: rgba(0, 0, 0, 0.04);
 		cursor: pointer;
-		border: 1px solid var(--border-subtle);
+		border: 1px solid rgba(0, 0, 0, 0.1);
 	}
 
 	.bar {
 		width: 100%;
 		height: 2px;
-		background: var(--text-secondary);
+		background: #4a5568;
 		border-radius: 2px;
 		transition: all var(--duration-normal) var(--ease-out);
 		transform-origin: center;
 	}
 
-	.mobile-toggle:hover .bar { background: var(--text-primary); }
+	.mobile-toggle:hover .bar { background: #1a1a2e; }
 
 	/* Mobile Menu */
 	.mobile-menu {
-		background: rgba(9, 9, 16, 0.96);
+		background: rgba(255, 255, 255, 0.98);
 		backdrop-filter: blur(16px);
 		-webkit-backdrop-filter: blur(16px);
-		border-top: 1px solid var(--border-subtle);
+		border-top: 1px solid rgba(0, 0, 0, 0.08);
 		padding-block: var(--space-4);
 		animation: fade-in var(--duration-normal) var(--ease-out);
 	}
@@ -269,13 +272,13 @@
 		border-radius: var(--radius-md);
 		font-size: var(--text-base);
 		font-weight: 500;
-		color: var(--text-secondary);
+		color: #4a5568;
 		text-decoration: none;
 		transition: all var(--duration-fast) var(--ease-out);
 	}
 
-	.mobile-nav-link:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
-	.mobile-nav-link.active { color: var(--color-accent); background: rgba(251,191,36,0.08); }
+	.mobile-nav-link:hover { color: #1a1a2e; background: rgba(0, 0, 0, 0.04); }
+	.mobile-nav-link.active { color: var(--orange-500); background: rgba(255, 92, 16, 0.08); }
 
 	/* Responsive */
 	@media (max-width: 768px) {
