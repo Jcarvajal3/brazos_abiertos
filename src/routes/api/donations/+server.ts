@@ -2,18 +2,18 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { donationSchema } from '$lib/utils/validation';
 import { supabaseAdmin } from '$lib/server/supabase';
-import { STRIPE_SECRET_KEY } from '$env/dynamic/private';
+import { env } from '$env/dynamic/private';
 import { checkRateLimit, getClientIp } from '$lib/server/rateLimit';
 
 let stripeInstance: import('stripe').default | null = null;
 
 async function getStripe() {
-	if (!STRIPE_SECRET_KEY || STRIPE_SECRET_KEY === 'sk_test_placeholder') {
+	if (!env.STRIPE_SECRET_KEY || env.STRIPE_SECRET_KEY === 'sk_test_placeholder') {
 		return null;
 	}
 	if (!stripeInstance) {
 		const Stripe = (await import('stripe')).default;
-		stripeInstance = new Stripe(STRIPE_SECRET_KEY);
+		stripeInstance = new Stripe(env.STRIPE_SECRET_KEY);
 	}
 	return stripeInstance;
 }

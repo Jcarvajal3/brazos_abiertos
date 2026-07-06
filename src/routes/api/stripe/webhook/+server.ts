@@ -1,18 +1,18 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET } from '$env/dynamic/private';
+import { env } from '$env/dynamic/private';
 import { supabaseAdmin } from '$lib/server/supabase';
 
 export const POST: RequestHandler = async ({ request }) => {
-	if (!STRIPE_SECRET_KEY || STRIPE_SECRET_KEY === 'sk_test_placeholder') {
+	if (!env.STRIPE_SECRET_KEY || env.STRIPE_SECRET_KEY === 'sk_test_placeholder') {
 		throw error(503, 'Stripe no está configurado');
 	}
-	if (!STRIPE_WEBHOOK_SECRET || STRIPE_WEBHOOK_SECRET === 'whsec_placeholder') {
+	if (!env.STRIPE_WEBHOOK_SECRET || env.STRIPE_WEBHOOK_SECRET === 'whsec_placeholder') {
 		throw error(503, 'Stripe webhook secret no está configurado');
 	}
 
 	const Stripe = (await import('stripe')).default;
-	const stripe = new Stripe(STRIPE_SECRET_KEY);
+	const stripe = new Stripe(env.STRIPE_SECRET_KEY);
 
 	const signature = request.headers.get('stripe-signature');
 	if (!signature) {
@@ -23,7 +23,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	let event: import('stripe').Stripe.Event;
 	try {
-		event = stripe.webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET);
+		event = stripe.webhooks.constructEvent(body, signature, env.STRIPE_WEBHOOK_SECRET);
 	} catch (err: any) {
 		console.error('Webhook signature verification failed:', err.message);
 		throw error(400, `Webhook Error: ${err.message}`);

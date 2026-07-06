@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/dynamic/public';
-import { SUPABASE_SERVICE_ROLE_KEY } from '$env/dynamic/private';
+import { env as publicEnv } from '$env/dynamic/public';
+import { env as privateEnv } from '$env/dynamic/private';
 import type { Database } from '$lib/types';
 import type { Cookies } from '@sveltejs/kit';
 
@@ -11,7 +11,7 @@ import type { Cookies } from '@sveltejs/kit';
  * Uses the anon key — respects Row Level Security.
  */
 export function createSupabaseServerClient(cookies: Cookies) {
-	return createServerClient<Database>(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+	return createServerClient<Database>(publicEnv.PUBLIC_SUPABASE_URL, publicEnv.PUBLIC_SUPABASE_ANON_KEY, {
 		cookies: {
 			getAll() {
 				return cookies.getAll();
@@ -31,8 +31,8 @@ export function createSupabaseServerClient(cookies: Cookies) {
  * Used for: setting user roles, confirming manual payments, admin operations.
  */
 export const supabaseAdmin = createClient<Database>(
-	PUBLIC_SUPABASE_URL,
-	SUPABASE_SERVICE_ROLE_KEY,
+	publicEnv.PUBLIC_SUPABASE_URL,
+	privateEnv.SUPABASE_SERVICE_ROLE_KEY,
 	{
 		auth: {
 			autoRefreshToken: false,

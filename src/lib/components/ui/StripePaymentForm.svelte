@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { PUBLIC_STRIPE_PUBLISHABLE_KEY } from '$env/dynamic/public';
+	import { env } from '$env/dynamic/public';
 	import type { Stripe, StripeElements, StripePaymentElement } from '@stripe/stripe-js';
 
 	interface Props {
@@ -23,7 +23,7 @@
 	let ready = $state(false);
 
 	onMount(async () => {
-		if (!PUBLIC_STRIPE_PUBLISHABLE_KEY || PUBLIC_STRIPE_PUBLISHABLE_KEY === 'pk_test_placeholder') {
+		if (!env.PUBLIC_STRIPE_PUBLISHABLE_KEY || env.PUBLIC_STRIPE_PUBLISHABLE_KEY === 'pk_test_placeholder') {
 			onError('Stripe no está configurado con clave real. Usa Pago Móvil o Transferencia.');
 			loading = false;
 			return;
@@ -31,7 +31,7 @@
 
 		try {
 			const { loadStripe } = await import('@stripe/stripe-js');
-			stripe = await loadStripe(PUBLIC_STRIPE_PUBLISHABLE_KEY);
+			stripe = await loadStripe(env.PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
 			if (!stripe) {
 				onError('No se pudo cargar Stripe. Verifica tu conexión.');
