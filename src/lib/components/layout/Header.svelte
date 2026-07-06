@@ -130,7 +130,7 @@
 	}
 
 	.logo-img {
-		height: 38px;
+		height: 64px;
 		width: auto;
 		object-fit: contain;
 		mix-blend-mode: multiply;
@@ -252,6 +252,6 @@
 	}
 
 	@media (max-width: 480px) {
-		.logo-img { height: 32px; }
+		.logo-img { height: 48px; }
 	}
 </style>
