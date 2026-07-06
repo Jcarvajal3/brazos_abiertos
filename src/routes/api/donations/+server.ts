@@ -2,7 +2,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { donationSchema } from '$lib/utils/validation';
 import { supabaseAdmin } from '$lib/server/supabase';
-import { STRIPE_SECRET_KEY } from '$env/static/private';
+import { STRIPE_SECRET_KEY } from '$env/dynamic/private';
 import { checkRateLimit, getClientIp } from '$lib/server/rateLimit';
 
 let stripeInstance: import('stripe').default | null = null;

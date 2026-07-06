@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { PUBLIC_STRIPE_PUBLISHABLE_KEY } from '$env/static/public';
+	import { PUBLIC_STRIPE_PUBLISHABLE_KEY } from '$env/dynamic/public';
 	import type { Stripe, StripeElements, StripePaymentElement } from '@stripe/stripe-js';
 
 	interface Props {
