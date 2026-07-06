@@ -4,6 +4,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import Toaster from '$lib/components/ui/Toaster.svelte';
 	import { createSupabaseClient } from '$lib/supabase';
+	import logo from '$lib/assets/logo.png';
 	import type { LayoutData } from './$types';
 	import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -61,23 +62,10 @@
 	<aside class="sidebar" class:open={sidebarOpen} aria-label="Navegación del panel de administración">
 		<div class="sidebar-header">
 			<a href="/admin" class="sidebar-logo">
-				<svg viewBox="0 0 40 40" fill="none" width="32" height="32">
-					<rect width="40" height="40" rx="10" fill="#090910"/>
-					<path d="M6 24C6 14 13 11 20 11C27 11 34 14 34 24" stroke="url(#s1)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-					<path d="M20 28L13 21C11 19 11 16 13 14C15 12 18 13 20 15C22 13 25 12 27 14C29 16 29 19 27 21Z" fill="url(#s2)"/>
-					<defs>
-						<linearGradient id="s1" x1="6" y1="24" x2="34" y2="11" gradientUnits="userSpaceOnUse">
-							<stop stop-color="#FF5C10"/><stop offset="1" stop-color="#FBBF24"/>
-						</linearGradient>
-						<linearGradient id="s2" x1="13" y1="12" x2="27" y2="28" gradientUnits="userSpaceOnUse">
-							<stop stop-color="#FF5C10"/><stop offset="1" stop-color="#FBBF24"/>
-						</linearGradient>
-					</defs>
-				</svg>
-				<div class="sidebar-logo-text">
-					<span class="sidebar-logo-name">Admin</span>
-					<span class="sidebar-logo-sub">Brazos Abiertos</span>
+				<div class="sidebar-logo-container">
+					<img src={logo} alt="Brazos Abiertos" class="sidebar-logo-img" />
 				</div>
+				<span class="sidebar-admin-badge">Admin</span>
 			</a>
 		</div>
 
@@ -193,22 +181,37 @@
 
 	.sidebar-logo {
 		display: flex;
-		align-items: center;
-		gap: var(--space-3);
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--space-2);
 		text-decoration: none;
 	}
 
-	.sidebar-logo-text { display: flex; flex-direction: column; line-height: 1.2; }
-	.sidebar-logo-name {
-		font-family: var(--font-display);
-		font-size: var(--text-base);
-		font-weight: 800;
-		color: var(--text-primary);
-		letter-spacing: -0.02em;
+	.sidebar-logo-container {
+		background: #faf7f0;
+		padding: var(--space-2) var(--space-3);
+		border-radius: var(--radius-md);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 100%;
+		box-shadow: inset 0 1px 2px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.2);
 	}
-	.sidebar-logo-sub {
+
+	.sidebar-logo-img {
+		height: 28px;
+		width: auto;
+		object-fit: contain;
+	}
+
+	.sidebar-admin-badge {
+		font-family: var(--font-display);
 		font-size: var(--text-xs);
-		color: var(--text-muted);
+		font-weight: 700;
+		color: var(--orange-400);
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		padding-left: var(--space-1);
 	}
 
 	.sidebar-nav {

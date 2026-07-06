@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import logo from '$lib/assets/logo.png';
 
 	let scrolled = $state(false);
 	let mobileMenuOpen = $state(false);
@@ -22,27 +23,7 @@
 		<nav class="nav" aria-label="Navegación principal">
 			<!-- Logo -->
 			<a href="/" class="logo" aria-label="Brazos Abiertos con Venezuela — Inicio">
-				<div class="logo-icon">
-					<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="40" height="40">
-						<rect width="40" height="40" rx="10" fill="#ffffff"/>
-						<path d="M6 24C6 14 13 11 20 11C27 11 34 14 34 24" stroke="url(#h1)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-						<path d="M20 28L13 21C11 19 11 16 13 14C15 12 18 13 20 15C22 13 25 12 27 14C29 16 29 19 27 21Z" fill="url(#h2)"/>
-						<defs>
-							<linearGradient id="h1" x1="6" y1="24" x2="34" y2="11" gradientUnits="userSpaceOnUse">
-								<stop stop-color="#FF5C10"/>
-								<stop offset="1" stop-color="#FBBF24"/>
-							</linearGradient>
-							<linearGradient id="h2" x1="13" y1="12" x2="27" y2="28" gradientUnits="userSpaceOnUse">
-								<stop stop-color="#FF5C10"/>
-								<stop offset="1" stop-color="#FBBF24"/>
-							</linearGradient>
-						</defs>
-					</svg>
-				</div>
-				<div class="logo-text">
-					<span class="logo-name">Brazos Abiertos</span>
-					<span class="logo-sub">con Venezuela</span>
-				</div>
+				<img src={logo} alt="Brazos Abiertos con Venezuela" class="logo-img" />
 			</a>
 
 			<!-- Desktop Navigation -->
@@ -144,37 +125,20 @@
 	.logo {
 		display: flex;
 		align-items: center;
-		gap: var(--space-3);
 		text-decoration: none;
 		flex-shrink: 0;
 	}
 
-	.logo-icon {
-		border-radius: 10px;
-		overflow: hidden;
-		flex-shrink: 0;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	.logo-img {
+		height: 38px;
+		width: auto;
+		object-fit: contain;
+		mix-blend-mode: multiply;
+		transition: transform var(--duration-fast) var(--ease-out);
 	}
 
-	.logo-text {
-		display: flex;
-		flex-direction: column;
-		line-height: 1.2;
-	}
-
-	.logo-name {
-		font-family: var(--font-display);
-		font-size: var(--text-base);
-		font-weight: 800;
-		color: #1a1a2e;
-		letter-spacing: -0.02em;
-	}
-
-	.logo-sub {
-		font-family: var(--font-body);
-		font-size: var(--text-xs);
-		font-weight: 400;
-		color: #9ca3af;
+	.logo-img:hover {
+		transform: scale(1.02);
 	}
 
 	/* Nav Links */
@@ -288,6 +252,6 @@
 	}
 
 	@media (max-width: 480px) {
-		.logo-text { display: none; }
+		.logo-img { height: 32px; }
 	}
 </style>

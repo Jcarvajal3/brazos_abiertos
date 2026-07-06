@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { APP_CONFIG } from '$lib/utils/constants';
+	import logo from '$lib/assets/logo.png';
 
 	const currentYear = new Date().getFullYear();
 
@@ -42,23 +43,7 @@
 			<!-- Brand -->
 			<div class="footer-brand">
 				<a href="/" class="footer-logo" aria-label="Brazos Abiertos con Venezuela">
-					<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
-						<rect width="40" height="40" rx="10" fill="#ffffff"/>
-						<path d="M6 24C6 14 13 11 20 11C27 11 34 14 34 24" stroke="url(#f1)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-						<path d="M20 28L13 21C11 19 11 16 13 14C15 12 18 13 20 15C22 13 25 12 27 14C29 16 29 19 27 21Z" fill="url(#f2)"/>
-						<defs>
-							<linearGradient id="f1" x1="6" y1="24" x2="34" y2="11" gradientUnits="userSpaceOnUse">
-								<stop stop-color="#FF5C10"/><stop offset="1" stop-color="#FBBF24"/>
-							</linearGradient>
-							<linearGradient id="f2" x1="13" y1="12" x2="27" y2="28" gradientUnits="userSpaceOnUse">
-								<stop stop-color="#FF5C10"/><stop offset="1" stop-color="#FBBF24"/>
-							</linearGradient>
-						</defs>
-					</svg>
-					<div>
-						<p class="footer-logo-name">Brazos Abiertos</p>
-						<p class="footer-logo-sub">con Venezuela</p>
-					</div>
+					<img src={logo} alt="Brazos Abiertos con Venezuela" class="footer-logo-img" />
 				</a>
 				<p class="footer-tagline">
 					Unidos por Venezuela. Cada donación reconstruye una vida, una familia, una comunidad.
@@ -127,23 +112,20 @@
 	.footer-logo {
 		display: flex;
 		align-items: center;
-		gap: var(--space-3);
 		text-decoration: none;
 		margin-bottom: var(--space-4);
 	}
 
-	.footer-logo-name {
-		font-family: var(--font-display);
-		font-size: var(--text-base);
-		font-weight: 800;
-		color: #1a1a2e;
-		letter-spacing: -0.02em;
-		line-height: 1.2;
+	.footer-logo-img {
+		height: 42px;
+		width: auto;
+		object-fit: contain;
+		mix-blend-mode: multiply;
+		transition: transform var(--duration-fast) var(--ease-out);
 	}
 
-	.footer-logo-sub {
-		font-size: var(--text-xs);
-		color: #9ca3af;
+	.footer-logo-img:hover {
+		transform: scale(1.02);
 	}
 
 	.footer-tagline {

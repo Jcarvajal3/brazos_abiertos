@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import Button from '$lib/components/ui/Button.svelte';
+	import logo from '$lib/assets/logo.png';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();
@@ -21,19 +22,7 @@
 	<div class="login-card glass">
 		<!-- Logo -->
 		<div class="login-logo">
-			<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="48" height="48">
-				<rect width="40" height="40" rx="10" fill="#090910"/>
-				<path d="M6 24C6 14 13 11 20 11C27 11 34 14 34 24" stroke="url(#l1)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-				<path d="M20 28L13 21C11 19 11 16 13 14C15 12 18 13 20 15C22 13 25 12 27 14C29 16 29 19 27 21Z" fill="url(#l2)"/>
-				<defs>
-					<linearGradient id="l1" x1="6" y1="24" x2="34" y2="11" gradientUnits="userSpaceOnUse">
-						<stop stop-color="#FF5C10"/><stop offset="1" stop-color="#FBBF24"/>
-					</linearGradient>
-					<linearGradient id="l2" x1="13" y1="12" x2="27" y2="28" gradientUnits="userSpaceOnUse">
-						<stop stop-color="#FF5C10"/><stop offset="1" stop-color="#FBBF24"/>
-					</linearGradient>
-				</defs>
-			</svg>
+			<img src={logo} alt="Brazos Abiertos con Venezuela" class="login-logo-img" />
 		</div>
 
 		<h1 class="login-title">Panel de administración</h1>
@@ -143,7 +132,19 @@
 		animation: scale-in 0.4s var(--ease-out) both;
 	}
 
-	.login-logo { margin-bottom: var(--space-2); }
+	.login-logo {
+		margin-bottom: var(--space-2);
+		display: flex;
+		justify-content: center;
+		width: 100%;
+	}
+
+	.login-logo-img {
+		height: 48px;
+		width: auto;
+		object-fit: contain;
+		mix-blend-mode: multiply;
+	}
 
 	.login-title {
 		font-size: var(--text-2xl);

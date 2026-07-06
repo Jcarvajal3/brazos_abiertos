@@ -380,27 +380,31 @@ input, textarea, select {
   transform: translateY(-1px);
 }
 
-/* Outline */
+/* Outline — fills with orange on hover for clear contrast */
 .btn-outline {
-  background: transparent;
+  background: #ffffff;
   color: var(--text-primary);
   border-color: var(--border-default);
 }
 .btn-outline:hover {
-  background: var(--bg-secondary);
-  border-color: var(--orange-400);
-  color: var(--orange-600);
+  background: var(--orange-500);
+  border-color: var(--orange-500);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3);
+  transform: translateY(-1px);
 }
 
-/* Ghost */
+/* Ghost — subtle underline on hover */
 .btn-ghost {
   background: transparent;
   color: var(--text-secondary);
   border-color: transparent;
 }
 .btn-ghost:hover {
-  background: var(--bg-secondary);
+  background: rgba(0, 0, 0, 0.04);
   color: var(--text-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* Danger */
