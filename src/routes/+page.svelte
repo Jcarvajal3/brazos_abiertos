@@ -57,7 +57,7 @@
 				async (payload) => {
 					const { data: newDonation } = await supabase
 						.from('donations')
-						.select('id, donor_name, is_anonymous, amount, currency, confirmed_at, area:areas(name, icon, slug)')
+						.select('id, donor_name, is_anonymous, amount, currency, confirmed_at, message, area:areas(name, icon, slug)')
 						.eq('id', payload.new.id)
 						.single();
 
@@ -188,15 +188,15 @@
 					<span class="finance-label">Ingresos totales</span>
 					<span class="finance-amount finance-amount-income">
 						$<AnimatedCounter
-							value={stats.total_raised_usd}
-							format={(v) => Math.round(v).toLocaleString('en-US')}
+							value={stats.total_raised_usd + (data.bcvRate ? stats.total_raised_ves / data.bcvRate : 0)}
+							format={(v) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
 						/>
 					</span>
-					{#if stats.total_raised_ves > 0}
+					{#if data.bcvRate}
 						<span class="finance-secondary">
 							Bs.<AnimatedCounter
-								value={stats.total_raised_ves}
-								format={(v) => Math.round(v).toLocaleString('es-VE')}
+								value={(stats.total_raised_usd * data.bcvRate) + stats.total_raised_ves}
+								format={(v) => v.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
 							/>
 						</span>
 					{/if}
@@ -299,6 +299,13 @@
 							{d.is_anonymous ? '?' : getInitials(getDonorDisplayName(d.is_anonymous, d.donor_name))}
 						</div>
 						<span class="feed-name">{getDonorDisplayName(d.is_anonymous, d.donor_name)}</span>
+						<span class="feed-message" title={d.message ? `"${d.message}"` : ''}>
+							{#if d.message}
+								"{d.message}"
+							{:else}
+								—
+							{/if}
+						</span>
 						<span class="feed-area">
 							<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">{getAreaIconName(d.area?.icon)}</span>
 							{d.area?.name}
@@ -311,13 +318,13 @@
 							{/if}
 						</span>
 						<span class="feed-amount">
-							{#if d.currency === 'VES'}
-								{formatCurrency(d.amount, 'VES')}
-								<span class="feed-conversion" title="Conversión aproximada a tasa oficial BCV de Bs. {data.bcvRate.toFixed(2)}">
-									(~{formatCurrency(d.amount / data.bcvRate, 'USD')})
+							{#if d.currency === 'VES' && data.bcvRate}
+								{formatCurrency(d.amount / data.bcvRate, 'USD')}
+								<span class="feed-conversion" title="Pagado en Bs. {d.amount.toLocaleString('es-VE')} a tasa BCV Bs. {data.bcvRate.toFixed(2)}">
+									(Bs. {Math.round(d.amount).toLocaleString('es-VE')})
 								</span>
 							{:else}
-								{formatCurrency(d.amount, 'USD')}
+								{formatCurrency(d.amount, d.currency)}
 							{/if}
 						</span>
 					</div>
@@ -525,11 +532,19 @@
 							{#each recentDonations as d (d.id)}
 								<tr>
 									<td>
-										<div class="table-donor">
-											<div class="avatar avatar-orange" style="width:1.75rem;height:1.75rem;font-size:0.6rem;">
-												{d.is_anonymous ? '?' : getInitials(getDonorDisplayName(d.is_anonymous, d.donor_name))}
+										<div class="table-donor-wrapper">
+											<div class="table-donor">
+												<div class="avatar avatar-orange" style="width:1.75rem;height:1.75rem;font-size:0.6rem;flex-shrink:0;">
+													{d.is_anonymous ? '?' : getInitials(getDonorDisplayName(d.is_anonymous, d.donor_name))}
+												</div>
+												<span>{getDonorDisplayName(d.is_anonymous, d.donor_name)}</span>
 											</div>
-											<span>{getDonorDisplayName(d.is_anonymous, d.donor_name)}</span>
+											{#if d.message}
+												<div class="table-message" title={d.message}>
+													<span class="material-symbols-outlined" style="font-size:0.8rem;vertical-align:middle;color:var(--text-muted);">chat_bubble</span>
+													"{d.message}"
+												</div>
+											{/if}
 										</div>
 									</td>
 									<td>
@@ -539,13 +554,13 @@
 										</span>
 									</td>
 									<td class="table-amount">
-										{#if d.currency === 'VES'}
-											{formatCurrency(d.amount, 'VES')}
-											<span class="table-conversion" title="Conversión aproximada a tasa oficial BCV de Bs. {data.bcvRate.toFixed(2)}">
-												(~{formatCurrency(d.amount / data.bcvRate, 'USD')})
+										{#if d.currency === 'VES' && data.bcvRate}
+											{formatCurrency(d.amount / data.bcvRate, 'USD')}
+											<span class="table-conversion" title="Pagado en Bs. {d.amount.toLocaleString('es-VE')} a tasa BCV Bs. {data.bcvRate.toFixed(2)}">
+												(Bs. {Math.round(d.amount).toLocaleString('es-VE')})
 											</span>
 										{:else}
-											{formatCurrency(d.amount, 'USD')}
+											{formatCurrency(d.amount, d.currency)}
 										{/if}
 									</td>
 									<td class="table-date">{d.confirmed_at ? formatDate(d.confirmed_at) : '—'}</td>
@@ -1026,7 +1041,7 @@
 
 	.feed-row {
 		display: grid;
-		grid-template-columns: 2.25rem 2fr 2fr 1.5fr auto;
+		grid-template-columns: 2.25rem 2fr 3fr 2fr 1.5fr auto;
 		align-items: center;
 		gap: var(--space-4);
 		padding: var(--space-3) var(--space-4);
@@ -1100,6 +1115,29 @@
 		font-weight: 500;
 		margin-top: 2px;
 		text-align: right;
+	}
+
+	.feed-message {
+		font-weight: 500;
+		font-size: var(--text-sm);
+		color: var(--text-secondary);
+		font-style: italic;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		text-align: left;
+	}
+
+	.table-message {
+		font-size: var(--text-xs);
+		color: var(--text-muted);
+		font-style: italic;
+		margin-top: 2px;
+		margin-left: calc(1.75rem + var(--space-2));
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 250px;
 	}
 
 	@media (max-width: 640px) {

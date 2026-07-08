@@ -133,7 +133,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			donor_name: data.is_anonymous ? null : (data.donor_name ?? null),
 			donor_email: data.donor_email ?? null,
 			amount: data.amount,
-			currency: 'VES',
+			currency: data.currency,
 			payment_method: data.payment_method,
 			payment_status: 'pending',
 			manual_reference: data.manual_reference ?? null,

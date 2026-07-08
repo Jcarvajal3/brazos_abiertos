@@ -19,7 +19,7 @@ export const load: PageServerLoad = async ({ locals, fetch }) => {
 	// Fetch last 50 confirmed donations for the live feed (supports area filtering)
 	const { data: recentDonations } = await locals.supabase
 		.from('donations')
-		.select('id, donor_name, is_anonymous, amount, currency, confirmed_at, area:areas(name, icon, slug)')
+		.select('id, donor_name, is_anonymous, amount, currency, confirmed_at, message, area:areas(name, icon, slug)')
 		.eq('payment_status', 'confirmed')
 		.order('confirmed_at', { ascending: false })
 		.limit(50);

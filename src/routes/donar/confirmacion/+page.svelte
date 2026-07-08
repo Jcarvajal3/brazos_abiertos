@@ -86,7 +86,7 @@
 			<!-- Main Message -->
 			{#if displayStatus === 'confirmed' || data.stripeReturnStatus === 'succeeded'}
 				<h1 class="confirm-title">¡Gracias, {donorDisplay}!</h1>
-				<p class="confirm-subtitle">Tu donación ha sido procesada exitosamente. 🇻🇪</p>
+				<p class="confirm-subtitle">Tu donación ha sido procesada exitosamente.</p>
 			{:else if displayStatus === 'processing'}
 				<h1 class="confirm-title">Pago en proceso</h1>
 				<p class="confirm-subtitle">Tu pago está siendo confirmado. Esto puede tomar unos segundos.</p>
@@ -116,7 +116,7 @@
 							? '✓ Confirmada'
 							: displayStatus === 'processing'
 							? '⟳ Procesando'
-							: '⏳ Pendiente de verificación'}
+							: 'Pendiente de verificación'}
 					</Badge>
 				</div>
 
@@ -150,7 +150,9 @@
 			<!-- Manual payment instructions -->
 			{#if isManual && displayStatus === 'pending'}
 				<div class="manual-notice">
-					<div class="manual-notice-icon">⏳</div>
+					<div class="manual-notice-icon">
+						<span class="material-symbols-outlined" style="font-size:1.5rem;color:var(--blue-500);vertical-align:middle;">pending_actions</span>
+					</div>
 					<div>
 						<p class="manual-notice-title">Tu pago está pendiente de verificación</p>
 						<p class="manual-notice-text">
@@ -171,38 +173,35 @@
 
 			<!-- CTA Actions -->
 			<div class="confirm-actions">
-				<Button href="/" variant="primary" size="lg" id="btn-back-home">
-					🏠 Volver al inicio
+				<Button href="/donar" variant="primary" size="lg" id="btn-donate-again">
+					Donar de nuevo
 				</Button>
-				<Button href="/proyectos" variant="outline" size="lg" id="btn-see-projects">
-					🏗️ Ver proyectos apoyados
-				</Button>
-				<Button href="/donar" variant="ghost" size="sm" id="btn-donate-again">
-					❤️ Hacer otra donación
+				<Button href="/" variant="outline" size="lg" id="btn-back-home">
+					Volver al inicio
 				</Button>
 			</div>
 
 			<!-- Social share nudge -->
 			<div class="share-nudge">
-				<p>¿Quieres que más personas ayuden a Venezuela?</p>
+				<p>¿Quieres que más personas ayuden?</p>
 				<div class="share-btns">
 					<a
-						href="https://twitter.com/intent/tweet?text={encodeURIComponent('Acabo de donar a @BrazosAbiertosVE para ayudar a las víctimas del terremoto en Venezuela. ¡Únete! 🇻🇪❤️')}"
+						href="https://twitter.com/intent/tweet?text={encodeURIComponent('Acabo de donar a @BrazosAbiertosVE para ayudar a las víctimas del terremoto en Venezuela. ¡Únete!')}"
 						target="_blank"
 						rel="noopener noreferrer"
 						class="share-btn twitter"
 						id="share-twitter"
 					>
-						𝕏 Twitter
+						Compartir en X
 					</a>
 					<a
-						href="https://wa.me/?text={encodeURIComponent('Acabo de donar a Brazos Abiertos con Venezuela para ayudar a las víctimas del terremoto 🇻🇪❤️ ¡Únete!')}"
+						href="https://wa.me/?text={encodeURIComponent('Acabo de donar a Brazos Abiertos con Venezuela para ayudar a las víctimas del terremoto. ¡Únete!')}"
 						target="_blank"
 						rel="noopener noreferrer"
 						class="share-btn whatsapp"
 						id="share-whatsapp"
 					>
-						💬 WhatsApp
+						Compartir en WhatsApp
 					</a>
 				</div>
 			</div>
@@ -380,11 +379,18 @@
 	/* Actions */
 	.confirm-actions {
 		display: flex;
-		flex-direction: column;
+		flex-direction: row;
 		gap: var(--space-3);
 		width: 100%;
 	}
-	.confirm-actions :global(.btn) { width: 100%; justify-content: center; }
+	.confirm-actions :global(.btn) { flex: 1; justify-content: center; }
+
+	@media (max-width: 640px) {
+		.confirm-actions {
+			flex-direction: column;
+		}
+		.confirm-actions :global(.btn) { width: 100%; }
+	}
 
 	/* Share */
 	.share-nudge { text-align: center; }

@@ -43,18 +43,6 @@ export const donationSchema = z
 			});
 		}
 
-		// Pago móvil and transferencia only accept VES
-		if (
-			(data.payment_method === 'pago_movil' || data.payment_method === 'transferencia') &&
-			data.currency !== 'VES'
-		) {
-			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
-				message: 'El pago móvil y transferencia solo se aceptan en VES',
-				path: ['currency']
-			});
-		}
-
 		// Manual payments require reference
 		if (
 			(data.payment_method === 'pago_movil' || data.payment_method === 'transferencia') &&

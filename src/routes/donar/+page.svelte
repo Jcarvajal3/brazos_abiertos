@@ -50,7 +50,7 @@
 
 	// ─── Derived values ───────────────────────────────────────────
 	const finalAmount = $derived(isCustom ? Number(customAmount) || 0 : amount);
-	const currency = $derived(paymentMethod === 'stripe' ? 'USD' : 'VES');
+	const currency = 'USD' as const;
 	const suggestedAmounts = $derived(
 		paymentMethod === 'stripe' ? SUGGESTED_AMOUNTS_USD : SUGGESTED_AMOUNTS_VES
 	);
@@ -518,7 +518,7 @@
 						<div class="summary-row summary-total">
 							<span>Monto</span>
 							<strong class="text-gradient" style="font-size:var(--text-2xl);">
-								{formatCurrency(finalAmount, paymentMethod === 'stripe' ? 'USD' : 'VES')}
+								{formatCurrency(finalAmount, 'USD')}
 							</strong>
 						</div>
 					</div>
@@ -714,7 +714,7 @@
 								{:else if paymentMethod === 'stripe'}
 									Continuar al pago — {formatCurrency(finalAmount, 'USD')}
 								{:else}
-									Confirmar donación — {formatCurrency(finalAmount, 'VES')}
+									Confirmar donación — {formatCurrency(finalAmount, 'USD')}
 								{/if}
 							</Button>
 						{/if}
