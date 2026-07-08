@@ -6,7 +6,7 @@ export const AREAS_SEED = [
 		slug: 'infraestructura',
 		description: 'Reconstrucción de viviendas, puentes, carreteras y edificaciones dañadas.',
 		icon: '🏗️',
-		color: '#F97316', // orange
+		color: '#14609A', // primary blue
 		sort_order: 1,
 		active: true
 	},
@@ -65,21 +65,21 @@ export const PAYMENT_METHODS = {
 		name: 'Tarjeta de Crédito/Débito',
 		description: 'Pago seguro con Stripe',
 		currency: 'USD',
-		icon: '💳'
+		icon: 'credit_card'
 	},
 	pago_movil: {
 		id: 'pago_movil',
 		name: 'Pago Móvil',
 		description: 'Transferencia mediante pago móvil (VES)',
 		currency: 'VES',
-		icon: '📱'
+		icon: 'smartphone'
 	},
 	transferencia: {
 		id: 'transferencia',
 		name: 'Transferencia Bancaria',
 		description: 'Transferencia bancaria directa (VES)',
 		currency: 'VES',
-		icon: '🏦'
+		icon: 'account_balance'
 	}
 } as const;
 
@@ -109,7 +109,7 @@ export const SUGGESTED_AMOUNTS_VES = [50, 100, 250, 500, 1000, 2500];
 // ─── App Config ───────────────────────────────────────────────────────────────
 
 export const APP_CONFIG = {
-	name: 'Brazos Abiertos con Venezuela',
+	name: 'Brazos Abiertos Fundacion',
 	tagline: 'Juntos reconstruimos Venezuela',
 	description:
 		'Plataforma de donaciones para ayudar a las víctimas del terremoto de Venezuela 2026.',

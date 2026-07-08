@@ -5,6 +5,7 @@
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
 	import { formatCurrency, formatDateTime } from '$lib/utils/formatters';
+	import { getAreaIconName } from '$lib/utils/iconMap';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -100,11 +101,11 @@
 	{:else}
 		<div class="projects-grid">
 			{#each data.projects as project (project.id)}
-				<div class="project-card" style="--area-color: {project.area?.color ?? '#F97316'}">
+				<div class="project-card" style="--area-color: {project.area?.color ?? '#14609A'}">
 					<!-- Card header -->
 					<div class="project-card-header">
 						<div class="project-area-badge">
-							<span>{project.area?.icon}</span>
+							<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">{getAreaIconName(project.area?.icon)}</span>
 							<span>{project.area?.name}</span>
 						</div>
 						<Badge variant={statusVariant(project.status)}>
@@ -222,7 +223,7 @@
 					{/if}
 					<div class="detail-row">
 						<span class="detail-label">Área</span>
-						<span class="detail-val">{activeModal.area?.icon} {activeModal.area?.name}</span>
+						<span class="detail-val"><span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">{getAreaIconName(activeModal.area?.icon)}</span> {activeModal.area?.name}</span>
 					</div>
 					<div class="detail-row">
 						<span class="detail-label">Contacto</span>
@@ -327,7 +328,7 @@
 	.page-title { font-size: var(--text-3xl); font-weight: 900; letter-spacing: -0.03em; }
 	.page-subtitle { font-size: var(--text-sm); color: var(--text-muted); margin-top: var(--space-1); }
 
-	.feedback-banner { padding: var(--space-4) var(--space-5); border-radius: var(--radius-lg); font-size: var(--text-sm); font-weight: 500; }
+	.feedback-banner { padding: var(--space-4) var(--space-5); border-radius: 0; font-size: var(--text-sm); font-weight: 500; }
 	.feedback-banner.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; }
 	.feedback-banner.error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; }
 
@@ -345,7 +346,7 @@
 		transition: all var(--duration-fast);
 	}
 	.filter-chip:hover { border-color: var(--color-accent); color: var(--text-primary); }
-	.filter-chip.active { background: rgba(255,92,16,0.12); border-color: var(--orange-500); color: var(--orange-400); }
+	.filter-chip.active { background: rgba(20,96,154,0.12); border-color: var(--blue-500); color: var(--blue-400); }
 
 	/* Projects grid */
 	.projects-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-5); }
@@ -353,13 +354,13 @@
 	.project-card {
 		background: var(--bg-elevated);
 		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-xl);
+		border-radius: 0;
 		display: flex;
 		flex-direction: column;
 		overflow: hidden;
 		transition: border-color var(--duration-fast);
 	}
-	.project-card:has(.review-btn-pending) { border-color: rgba(255, 92, 16, 0.3); }
+	.project-card:has(.review-btn-pending) { border-color: rgba(20, 96, 154, 0.3); }
 
 	.project-card-header {
 		display: flex;
@@ -392,15 +393,15 @@
 	.project-progress { display: flex; flex-direction: column; gap: var(--space-1); }
 	.project-amounts { font-size: var(--text-xs); color: var(--text-muted); }
 
-	.rejection-note { font-size: var(--text-xs); color: #f87171; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); line-height: 1.5; }
+	.rejection-note { font-size: var(--text-xs); color: #f87171; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); padding: var(--space-2) var(--space-3); border-radius: 0; line-height: 1.5; }
 	.rejection-note span { font-weight: 700; }
 
 	.project-card-footer { display: flex; align-items: center; justify-content: space-between; padding: var(--space-4) var(--space-5); border-top: 1px solid var(--border-subtle); }
 	.project-date { font-size: var(--text-xs); color: var(--text-muted); }
 	.review-btn { padding: var(--space-2) var(--space-4); border-radius: var(--radius-md); font-size: var(--text-sm); font-weight: 700; font-family: var(--font-body); cursor: pointer; border: 1px solid var(--border-subtle); color: var(--text-secondary); background: transparent; transition: all var(--duration-fast); }
 	.review-btn:hover { border-color: var(--color-accent); color: var(--text-primary); }
-	.review-btn.review-btn-pending { background: rgba(255,92,16,0.12); border-color: var(--orange-500); color: var(--orange-400); }
-	.review-btn.review-btn-pending:hover { background: rgba(255,92,16,0.2); }
+	.review-btn.review-btn-pending { background: rgba(20,96,154,0.12); border-color: var(--blue-500); color: var(--blue-400); }
+	.review-btn.review-btn-pending:hover { background: rgba(20,96,154,0.2); }
 
 	/* Pagination */
 	.pagination { display: flex; align-items: center; justify-content: center; gap: var(--space-4); padding: var(--space-5); }
@@ -408,13 +409,13 @@
 	.page-info { font-size: var(--text-sm); color: var(--text-muted); }
 
 	/* Empty */
-	.empty-card { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-16); background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); }
+	.empty-card { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-16); background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: 0; }
 	.empty-icon { font-size: 3rem; }
 	.empty-text { font-size: var(--text-base); color: var(--text-muted); }
 
 	/* Modal */
 	.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; display: flex; align-items: center; justify-content: center; padding: var(--space-4); backdrop-filter: blur(4px); animation: fade-in 0.2s var(--ease-out); }
-	.modal-box { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--radius-2xl); width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl); animation: scale-in 0.25s var(--ease-out); }
+	.modal-box { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 0; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl); animation: scale-in 0.25s var(--ease-out); }
 	.modal-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-6); border-bottom: 1px solid var(--border-subtle); }
 	.modal-title { font-size: var(--text-xl); font-weight: 700; }
 	.modal-close { background: none; border: none; font-size: 1.2rem; color: var(--text-muted); cursor: pointer; padding: var(--space-1); border-radius: var(--radius-md); transition: all var(--duration-fast); }
@@ -427,7 +428,7 @@
 	.detail-row-full { flex-direction: column; gap: var(--space-2); }
 	.detail-label { font-size: var(--text-sm); color: var(--text-muted); flex-shrink: 0; }
 	.detail-val { font-size: var(--text-sm); font-weight: 500; color: var(--text-primary); text-align: right; }
-	.detail-desc { font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.7; padding: var(--space-3); background: var(--bg-base); border-radius: var(--radius-md); }
+	.detail-desc { font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.7; padding: var(--space-3); background: var(--bg-base); border-radius: 0; }
 	.modal-link { color: var(--color-accent); text-decoration: none; }
 	.modal-link:hover { color: var(--text-primary); }
 

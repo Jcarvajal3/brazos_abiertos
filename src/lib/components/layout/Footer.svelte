@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { APP_CONFIG } from '$lib/utils/constants';
-	import logo from '$lib/assets/logo.png';
+	import logo from '$lib/assets/logo_azul.jpeg';
 
 	const currentYear = new Date().getFullYear();
 
@@ -8,25 +8,24 @@
 		{
 			title: 'Donar',
 			links: [
-				{ href: '/donar', label: 'Hacer una donación' },
+				{ href: '/donar', label: 'Hacer una donacion' },
 				{ href: '/proyectos', label: 'Ver proyectos' },
-				{ href: '/proyectos/registrar', label: 'Registrar ONG' },
 			]
 		},
 		{
-			title: 'Áreas de ayuda',
+			title: 'Areas de ayuda',
 			links: [
-				{ href: '/donar?area=infraestructura', label: '🏗️ Infraestructura' },
-				{ href: '/donar?area=salud',           label: '🏥 Salud' },
-				{ href: '/donar?area=alimentacion',    label: '🍱 Alimentación' },
-				{ href: '/donar?area=educacion',       label: '📚 Educación' },
+				{ href: '/donar?area=infraestructura', label: 'Infraestructura' },
+				{ href: '/donar?area=salud',           label: 'Salud' },
+				{ href: '/donar?area=alimentacion',    label: 'Alimentacion' },
+				{ href: '/donar?area=educacion',       label: 'Educacion' },
 			]
 		},
 		{
-			title: 'Información',
+			title: 'Informacion',
 			links: [
 				{ href: '/transparencia', label: 'Transparencia' },
-				{ href: '/terminos',      label: 'Términos de uso' },
+				{ href: '/terminos',      label: 'Terminos de uso' },
 				{ href: '/privacidad',    label: 'Privacidad' },
 				{ href: '/contacto',      label: 'Contacto' },
 			]
@@ -35,18 +34,17 @@
 </script>
 
 <footer class="site-footer">
-	<!-- Divider glow -->
-	<div class="footer-glow" aria-hidden="true"></div>
+	<div class="footer-accent" aria-hidden="true"></div>
 
 	<div class="container">
 		<div class="footer-grid">
 			<!-- Brand -->
 			<div class="footer-brand">
-				<a href="/" class="footer-logo" aria-label="Brazos Abiertos con Venezuela">
-					<img src={logo} alt="Brazos Abiertos con Venezuela" class="footer-logo-img" />
+				<a href="/" class="footer-logo" aria-label="Brazos Abiertos Fundacion">
+					<img src={logo} alt="Brazos Abiertos Fundacion" class="footer-logo-img" />
 				</a>
 				<p class="footer-tagline">
-					Unidos por Venezuela. Cada donación reconstruye una vida, una familia, una comunidad.
+					Unidos por Venezuela. Cada donacion reconstruye una vida, una familia, una comunidad.
 				</p>
 				<p class="footer-contact">
 					<a href="mailto:{APP_CONFIG.email}">{APP_CONFIG.email}</a>
@@ -72,13 +70,13 @@
 
 		<div class="footer-bottom">
 			<p class="footer-copy">
-				© {currentYear} Brazos Abiertos con Venezuela. Todos los derechos reservados.
+				{currentYear} Brazos Abiertos Fundacion. Todos los derechos reservados.
 			</p>
 			<p class="footer-secure">
 				<svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" style="opacity:0.5">
 					<path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
 				</svg>
-				Pagos seguros · Stripe · Datos protegidos
+				Pagos seguros — Stripe — Datos protegidos
 			</p>
 		</div>
 	</div>
@@ -88,17 +86,17 @@
 	.site-footer {
 		position: relative;
 		margin-top: var(--space-20);
-		background-color: #f8f9fa;
-		border-top: 1px solid rgba(0,0,0,0.08);
+		background-color: var(--blue-900);
+		color: rgba(255, 255, 255, 0.7);
 		padding-top: var(--space-16);
 		padding-bottom: var(--space-8);
 	}
 
-	.footer-glow {
+	.footer-accent {
 		position: absolute;
-		top: -1px; left: 50%; transform: translateX(-50%);
-		width: 600px; height: 1px;
-		background: linear-gradient(90deg, transparent, rgba(255,92,16,0.3) 30%, rgba(251,191,36,0.2) 70%, transparent);
+		top: 0; left: 0; right: 0;
+		height: 3px;
+		background: linear-gradient(90deg, var(--blue-500), var(--blue-300));
 	}
 
 	.footer-grid {
@@ -120,17 +118,19 @@
 		height: 42px;
 		width: auto;
 		object-fit: contain;
-		mix-blend-mode: multiply;
-		transition: transform var(--duration-fast) var(--ease-out);
+		filter: invert(1) grayscale(1) brightness(2.5);
+		mix-blend-mode: screen;
+		opacity: 0.9;
+		transition: opacity var(--duration-fast) var(--ease-out);
 	}
 
 	.footer-logo-img:hover {
-		transform: scale(1.02);
+		opacity: 1;
 	}
 
 	.footer-tagline {
 		font-size: var(--text-sm);
-		color: #6b7280;
+		color: rgba(255, 255, 255, 0.5);
 		line-height: 1.7;
 		margin-bottom: var(--space-4);
 		max-width: 260px;
@@ -138,11 +138,11 @@
 
 	.footer-contact a {
 		font-size: var(--text-sm);
-		color: #4a5568;
+		color: rgba(255, 255, 255, 0.6);
 		text-decoration: none;
 		transition: color var(--duration-fast) var(--ease-out);
 	}
-	.footer-contact a:hover { color: #ff5c10; }
+	.footer-contact a:hover { color: #ffffff; }
 
 	/* Footer sections */
 	.footer-section-title {
@@ -151,7 +151,7 @@
 		font-family: var(--font-display);
 		text-transform: uppercase;
 		letter-spacing: 0.1em;
-		color: #9ca3af;
+		color: rgba(255, 255, 255, 0.35);
 		margin-bottom: var(--space-4);
 	}
 
@@ -164,17 +164,17 @@
 
 	.footer-link {
 		font-size: var(--text-sm);
-		color: #4a5568;
+		color: rgba(255, 255, 255, 0.6);
 		text-decoration: none;
 		transition: color var(--duration-fast) var(--ease-out);
 	}
-	.footer-link:hover { color: #ff5c10; }
+	.footer-link:hover { color: #ffffff; }
 
 	/* Divider */
 	.divider {
 		border: none;
 		height: 1px;
-		background: rgba(0,0,0,0.08);
+		background: rgba(255, 255, 255, 0.1);
 		margin-bottom: var(--space-6);
 	}
 
@@ -189,7 +189,7 @@
 
 	.footer-copy {
 		font-size: var(--text-sm);
-		color: #9ca3af;
+		color: rgba(255, 255, 255, 0.3);
 	}
 
 	.footer-secure {
@@ -197,7 +197,7 @@
 		align-items: center;
 		gap: var(--space-1);
 		font-size: var(--text-xs);
-		color: #9ca3af;
+		color: rgba(255, 255, 255, 0.3);
 	}
 
 	/* Responsive */

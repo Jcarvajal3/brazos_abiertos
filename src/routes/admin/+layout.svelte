@@ -208,7 +208,7 @@
 		font-family: var(--font-display);
 		font-size: var(--text-xs);
 		font-weight: 700;
-		color: var(--orange-400);
+		color: var(--blue-400);
 		text-transform: uppercase;
 		letter-spacing: 0.1em;
 		padding-left: var(--space-1);
@@ -239,9 +239,9 @@
 		color: var(--text-primary);
 	}
 	.nav-item.active {
-		background: rgba(255, 92, 16, 0.12);
-		color: var(--orange-400);
-		border: 1px solid rgba(255, 92, 16, 0.25);
+		background: rgba(20, 96, 154, 0.12);
+		color: var(--blue-400);
+		border: 1px solid rgba(20, 96, 154, 0.25);
 	}
 	.nav-icon { font-size: 1.1rem; flex-shrink: 0; line-height: 1; }
 	.nav-label { font-family: var(--font-display); font-weight: 600; flex: 1; }
@@ -250,7 +250,7 @@
 		height: 20px;
 		padding: 0 5px;
 		border-radius: var(--radius-full);
-		background: var(--orange-500);
+		background: var(--blue-500);
 		color: white;
 		font-size: 11px;
 		font-weight: 800;
@@ -287,7 +287,7 @@
 		width: 2.25rem;
 		height: 2.25rem;
 		border-radius: 50%;
-		background: linear-gradient(135deg, var(--orange-500), var(--gold-400));
+		background: linear-gradient(135deg, var(--blue-500), var(--blue-400));
 		display: flex;
 		align-items: center;
 		justify-content: center;

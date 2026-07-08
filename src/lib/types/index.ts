@@ -84,6 +84,34 @@ export interface DonationStats {
 	last_updated: string;
 }
 
+export interface Expense {
+	id: string;
+	area_id: string;
+	project_id: string | null;
+	concept: string;
+	description: string | null;
+	amount: number;
+	currency: DonationCurrency;
+	expense_date: string;
+	receipt_image_url: string | null;
+	receipt_image_urls: string[] | null;
+	vendor: string | null;
+	created_by: string | null;
+	notes: string | null;
+	created_at: string;
+	updated_at: string;
+	// Relations
+	area?: Area;
+	project?: Project | null;
+}
+
+export interface ExpenseStats {
+	total_expenses_usd: number;
+	total_expenses_ves: number;
+	total_expense_records: number;
+	last_updated: string;
+}
+
 // ─── Form / UI Types ──────────────────────────────────────────────────────────
 
 export interface DonationFormData {
@@ -158,10 +186,18 @@ export interface Database {
 					Omit<Donation, 'id' | 'created_at' | 'area' | 'project'>
 				>;
 			};
+			expenses: {
+				Row: Expense;
+				Insert: Omit<Expense, 'id' | 'created_at' | 'updated_at' | 'area' | 'project'>;
+				Update: Partial<Omit<Expense, 'id' | 'created_at' | 'area' | 'project'>>;
+			};
 		};
 		Views: {
 			donation_stats: {
 				Row: DonationStats;
+			};
+			expense_stats: {
+				Row: ExpenseStats;
 			};
 		};
 	};

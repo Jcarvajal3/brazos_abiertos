@@ -1,6 +1,6 @@
 <script lang="ts">
 	interface Props {
-		variant?: 'orange' | 'gold' | 'success' | 'error' | 'pending' | 'muted';
+		variant?: 'primary' | 'orange' | 'gold' | 'success' | 'error' | 'pending' | 'muted';
 		class?: string;
 		children: import('svelte').Snippet;
 	}

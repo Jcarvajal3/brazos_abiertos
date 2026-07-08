@@ -2,6 +2,7 @@
 	import AnimatedCounter from '$lib/components/ui/AnimatedCounter.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { formatCurrency, formatRelativeTime, getDonorDisplayName, getPaymentMethodLabel } from '$lib/utils/formatters';
+	import { getAreaIconName } from '$lib/utils/iconMap';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -11,14 +12,14 @@
 			label: 'Total recaudado (USD)',
 			value: `$${Number(data.stats.total_raised_usd).toLocaleString('en-US', { minimumFractionDigits: 0 })}`,
 			icon: '💵',
-			color: 'var(--orange-400)',
+			color: 'var(--blue-400)',
 			sub: 'Donaciones confirmadas'
 		},
 		{
 			label: 'Total recaudado (VES)',
 			value: `Bs.${Number(data.stats.total_raised_ves).toLocaleString('es-VE', { minimumFractionDigits: 0 })}`,
 			icon: '🇻🇪',
-			color: 'var(--gold-400)',
+			color: 'var(--blue-400)',
 			sub: 'Pago móvil y transferencia'
 		},
 		{
@@ -200,7 +201,7 @@
 									{getDonorDisplayName(donation.is_anonymous, donation.donor_name)}
 								</td>
 								<td>
-									{donation.area?.icon} {donation.area?.name}
+									<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">{getAreaIconName(donation.area?.icon)}</span> {donation.area?.name}
 								</td>
 								<td class="td-amount">
 									{formatCurrency(donation.amount, donation.currency)}
@@ -251,7 +252,7 @@
 		align-items: center;
 		gap: var(--space-3);
 		padding: var(--space-4) var(--space-5);
-		border-radius: var(--radius-lg);
+		border-radius: 0;
 		text-decoration: none;
 		font-size: var(--text-sm);
 		font-weight: 500;
@@ -259,14 +260,14 @@
 	}
 	.alert-banner:hover { transform: translateX(4px); }
 	.alert-orange {
-		background: rgba(255, 92, 16, 0.1);
-		border: 1px solid rgba(255, 92, 16, 0.3);
-		color: var(--orange-400);
+		background: rgba(20, 96, 154, 0.1);
+		border: 1px solid rgba(20, 96, 154, 0.3);
+		color: var(--blue-400);
 	}
 	.alert-gold {
-		background: rgba(251, 191, 36, 0.1);
-		border: 1px solid rgba(251, 191, 36, 0.3);
-		color: var(--gold-400);
+		background: rgba(20, 96, 154, 0.08);
+		border: 1px solid rgba(20, 96, 154, 0.25);
+		color: var(--blue-400);
 	}
 	.alert-banner strong { color: var(--text-primary); }
 	.alert-arrow { margin-left: auto; }
@@ -281,7 +282,7 @@
 	.kpi-card {
 		background: var(--bg-elevated);
 		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-xl);
+		border-radius: 0;
 		padding: var(--space-5);
 		display: flex;
 		align-items: flex-start;
@@ -315,7 +316,7 @@
 	.breakdown-card {
 		background: var(--bg-elevated);
 		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-xl);
+		border-radius: 0;
 		padding: var(--space-6);
 	}
 
@@ -359,13 +360,13 @@
 	.activity-card {
 		background: var(--bg-elevated);
 		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-xl);
+		border-radius: 0;
 		padding: var(--space-6);
 	}
 	.empty-state { font-size: var(--text-sm); color: var(--text-muted); text-align: center; padding: var(--space-8); }
 
 	.td-name { font-weight: 500; color: var(--text-primary); }
-	.td-amount { font-family: var(--font-display); font-weight: 700; color: var(--gold-400); }
+	.td-amount { font-family: var(--font-display); font-weight: 700; color: var(--blue-400); }
 	.td-method { color: var(--text-secondary); font-size: var(--text-xs); }
 	.td-date { color: var(--text-muted); font-size: var(--text-xs); white-space: nowrap; }
 	.table-action-link { font-size: var(--text-xs); color: var(--color-accent); text-decoration: none; font-weight: 600; }

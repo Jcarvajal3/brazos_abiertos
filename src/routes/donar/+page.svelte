@@ -7,6 +7,7 @@
 	import { toast } from '$lib/stores/toast';
 	import { SUGGESTED_AMOUNTS_USD, SUGGESTED_AMOUNTS_VES, BANK_DETAILS } from '$lib/utils/constants';
 	import { formatCurrency } from '$lib/utils/formatters';
+	import { getAreaIconName } from '$lib/utils/iconMap';
 	import type { PageData } from './$types';
 	import type { Area, Project } from '$lib/types';
 
@@ -68,6 +69,13 @@
 		donateToGeneral = false;
 		loadingProjects = true;
 		areaProjects = [];
+
+		if (area.slug === 'cualquiera') {
+			donateToGeneral = true;
+			loadingProjects = false;
+			goToStep(3);
+			return;
+		}
 
 		const { data: projects } = await supabase
 			.from('projects')
@@ -257,7 +265,7 @@
 								id="area-btn-{area.slug}"
 								style="--area-color: {area.color}"
 							>
-								<span class="area-select-icon" role="img" aria-label={area.name}>{area.icon}</span>
+								<span class="area-select-icon material-symbols-outlined" style="color: var(--area-color);" aria-label={area.name}>{getAreaIconName(area.icon)}</span>
 								<span class="area-select-name">{area.name}</span>
 								<span class="area-select-desc">{area.description}</span>
 							</button>
@@ -275,7 +283,7 @@
 							</button>
 						</div>
 						<h2>
-							{selectedArea?.icon} {selectedArea?.name}
+							<span class="material-symbols-outlined" style="font-size:1.25rem;vertical-align:middle;">{getAreaIconName(selectedArea?.icon)}</span> {selectedArea?.name}
 							— ¿A qué proyecto quieres apoyar?
 						</h2>
 						<p>Elige un proyecto específico o dona al área en general.</p>
@@ -288,7 +296,7 @@
 						onclick={selectGeneral}
 						id="donate-general"
 					>
-						<div class="general-icon">🌐</div>
+						<div class="general-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></div>
 						<div class="general-text">
 							<strong>Donar al área en general</strong>
 							<span>Los fondos se distribuirán entre todos los proyectos de {selectedArea?.name}</span>
@@ -298,8 +306,8 @@
 
 					{#if loadingProjects}
 						<div class="projects-loading">
-							<div class="skeleton" style="height:100px;border-radius:var(--radius-lg);"></div>
-							<div class="skeleton" style="height:100px;border-radius:var(--radius-lg);"></div>
+							<div class="skeleton" style="height:100px;border-radius:0;"></div>
+							<div class="skeleton" style="height:100px;border-radius:0;"></div>
 						</div>
 					{:else if areaProjects.length > 0}
 						<p class="projects-divider-label">— O elige un proyecto específico —</p>
@@ -316,7 +324,7 @@
 									{#if project.cover_image_url}
 										<img src={project.cover_image_url} alt={project.name} class="project-select-img" />
 									{:else}
-										<div class="project-select-img-placeholder">{selectedArea?.icon ?? '🎯'}</div>
+										<div class="project-select-img-placeholder"><span class="material-symbols-outlined" style="font-size:2rem;color:var(--blue-400);">{getAreaIconName(selectedArea?.icon)}</span></div>
 									{/if}
 									<div class="project-select-info">
 										<p class="project-select-name">{project.name}</p>
@@ -350,7 +358,7 @@
 						<button class="back-btn" onclick={() => goToStep(2)}>← Cambiar proyecto</button>
 						<h2>¿Cuánto quieres donar?</h2>
 						<p>
-							Donando a: <strong>{selectedArea?.icon} {selectedArea?.name}</strong>
+							Donando a: <strong><span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">{getAreaIconName(selectedArea?.icon)}</span> {selectedArea?.name}</strong>
 							{#if selectedProject} → <strong>{selectedProject.name}</strong>{/if}
 						</p>
 					</div>
@@ -399,7 +407,7 @@
 						{/if}
 
 						{#if errors.amount}
-							<p class="form-error">⚠ {errors.amount}</p>
+							<p class="form-error">{errors.amount}</p>
 						{/if}
 					</div>
 
@@ -487,7 +495,7 @@
 					<div class="donation-summary">
 						<div class="summary-row">
 							<span>Área</span>
-							<strong>{selectedArea?.icon} {selectedArea?.name}</strong>
+							<strong><span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">{getAreaIconName(selectedArea?.icon)}</span> {selectedArea?.name}</strong>
 						</div>
 						{#if selectedProject}
 							<div class="summary-row">
@@ -609,7 +617,7 @@
 					{#if paymentMethod !== 'stripe'}
 						<div class="manual-fields animate-fade-in-up">
 							<p class="manual-instruction">
-								✅ Realiza el pago con los datos de arriba, luego ingresa el número de referencia aquí para confirmar tu donación.
+								Realiza el pago con los datos de arriba, luego ingresa el número de referencia aquí para confirmar tu donación.
 							</p>
 							<div class="form-row">
 								<div class="form-group">
@@ -625,7 +633,7 @@
 										bind:value={manualReference}
 									/>
 									{#if errors.manualReference}
-										<p class="form-error">⚠ {errors.manualReference}</p>
+										<p class="form-error">{errors.manualReference}</p>
 									{/if}
 								</div>
 								<div class="form-group">
@@ -644,7 +652,7 @@
 						<!-- Stripe Elements: mounted once clientSecret is ready -->
 						{#if stripeReady}
 							<div class="stripe-elements-wrap animate-fade-in-up">
-								<p class="stripe-ready-label">💳 Ingresa los datos de tu tarjeta:</p>
+								<p class="stripe-ready-label">Ingresa los datos de tu tarjeta:</p>
 								<StripePaymentForm
 									bind:this={stripeFormRef}
 									clientSecret={stripeClientSecret}
@@ -676,7 +684,7 @@
 								onclick={confirmStripe}
 								id="btn-pay-card"
 							>
-								{submitting ? 'Procesando pago…' : `💳 Pagar ${formatCurrency(finalAmount, 'USD')}`}
+								{submitting ? 'Procesando pago…' : `Pagar ${formatCurrency(finalAmount, 'USD')}`}
 							</Button>
 							<button class="btn-reset-stripe" onclick={() => { stripeReady = false; stripeClientSecret = ''; }}>← Cambiar método de pago</button>
 						{:else}
@@ -692,14 +700,14 @@
 								{#if submitting}
 									Procesando…
 								{:else if paymentMethod === 'stripe'}
-									❤️ Continuar al pago — {formatCurrency(finalAmount, 'USD')}
+									Continuar al pago — {formatCurrency(finalAmount, 'USD')}
 								{:else}
-									❤️ Confirmar donación — {formatCurrency(finalAmount, 'VES')}
+									Confirmar donación — {formatCurrency(finalAmount, 'VES')}
 								{/if}
 							</Button>
 						{/if}
 						<p class="submit-note">
-							🔒 Tu información está protegida y encriptada
+							Tu información está protegida y encriptada
 						</p>
 					</div>
 				</div>
@@ -765,7 +773,7 @@
 		border-color: var(--color-primary);
 		background: var(--color-primary);
 		color: white;
-		box-shadow: 0 0 0 4px rgba(255,92,16,0.2);
+		box-shadow: 0 0 0 4px rgba(20,96,154,0.2);
 		cursor: default;
 	}
 
@@ -847,7 +855,7 @@
 		padding: var(--space-5);
 		background: var(--bg-elevated);
 		border: 2px solid var(--border-subtle);
-		border-radius: var(--radius-xl);
+		border-radius: 0;
 		cursor: pointer;
 		transition: all var(--duration-normal) var(--ease-out);
 		font-family: var(--font-body);
@@ -878,7 +886,7 @@
 		padding: var(--space-5);
 		background: var(--bg-elevated);
 		border: 2px solid var(--border-default);
-		border-radius: var(--radius-xl);
+		border-radius: 0;
 		cursor: pointer;
 		transition: all var(--duration-normal) var(--ease-out);
 		text-align: left;
@@ -886,16 +894,16 @@
 		font-family: var(--font-body);
 	}
 	.general-option:hover, .general-option.selected {
-		border-color: var(--color-accent);
-		background: rgba(251,191,36,0.06);
+		border-color: var(--color-primary);
+		background: rgba(20,96,154,0.06);
 	}
-	.general-option.selected { box-shadow: 0 0 0 3px rgba(251,191,36,0.2); }
+	.general-option.selected { box-shadow: 0 0 0 3px rgba(20,96,154,0.2); }
 
 	.general-icon { font-size: 2rem; flex-shrink: 0; }
 	.general-text { flex: 1; display: flex; flex-direction: column; gap: var(--space-1); }
 	.general-text strong { font-family: var(--font-display); font-size: var(--text-base); color: var(--text-primary); }
 	.general-text span { font-size: var(--text-sm); color: var(--text-muted); }
-	.general-arrow { font-size: var(--text-xl); color: var(--color-accent); }
+	.general-arrow { font-size: var(--text-xl); color: var(--color-primary); }
 
 	.projects-divider-label {
 		text-align: center;
@@ -917,7 +925,7 @@
 		padding: var(--space-4);
 		background: var(--bg-elevated);
 		border: 2px solid var(--border-subtle);
-		border-radius: var(--radius-xl);
+		border-radius: 0;
 		cursor: pointer;
 		transition: all var(--duration-normal) var(--ease-out);
 		text-align: left;
@@ -925,10 +933,10 @@
 		font-family: var(--font-body);
 	}
 	.project-select-card:hover { border-color: var(--color-primary); transform: translateY(-1px); }
-	.project-select-card.selected { border-color: var(--color-primary); background: rgba(255,92,16,0.06); box-shadow: 0 0 0 3px rgba(255,92,16,0.15); }
+	.project-select-card.selected { border-color: var(--color-primary); background: rgba(20,96,154,0.06); box-shadow: 0 0 0 3px rgba(20,96,154,0.15); }
 
-	.project-select-img { width: 72px; height: 72px; border-radius: var(--radius-md); object-fit: cover; flex-shrink: 0; }
-	.project-select-img-placeholder { width: 72px; height: 72px; border-radius: var(--radius-md); background: rgba(255,92,16,0.1); display: flex; align-items: center; justify-content: center; font-size: 1.75rem; flex-shrink: 0; }
+	.project-select-img { width: 72px; height: 72px; border-radius: 0; object-fit: cover; flex-shrink: 0; }
+	.project-select-img-placeholder { width: 72px; height: 72px; border-radius: 0; background: rgba(20,96,154,0.1); display: flex; align-items: center; justify-content: center; font-size: 1.75rem; flex-shrink: 0; }
 	.project-select-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
 	.project-select-name { font-family: var(--font-display); font-size: var(--text-base); font-weight: 700; color: var(--text-primary); }
 	.project-select-ong { font-size: var(--text-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
@@ -936,7 +944,7 @@
 	.project-select-progress { margin-top: var(--space-2); display: flex; flex-direction: column; gap: var(--space-1); }
 	.project-select-raised { font-size: var(--text-xs); color: var(--text-muted); }
 
-	.no-projects { text-align: center; padding: var(--space-8); background: var(--bg-elevated); border-radius: var(--radius-xl); border: 1px dashed var(--border-default); display: flex; flex-direction: column; gap: var(--space-3); align-items: center; }
+	.no-projects { text-align: center; padding: var(--space-8); background: var(--bg-elevated); border-radius: 0; border: 1px dashed var(--border-default); display: flex; flex-direction: column; gap: var(--space-3); align-items: center; }
 	.no-projects p { color: var(--text-secondary); font-size: var(--text-sm); }
 	.no-projects strong { color: var(--text-primary); }
 
@@ -948,7 +956,7 @@
 		padding: var(--space-3) var(--space-4);
 		background: var(--bg-elevated);
 		border: 2px solid var(--border-subtle);
-		border-radius: var(--radius-md);
+		border-radius: 0;
 		color: var(--text-secondary);
 		font-family: var(--font-display);
 		font-size: var(--text-base);
@@ -959,9 +967,9 @@
 	.amount-btn:hover { border-color: var(--color-primary); color: var(--text-primary); }
 	.amount-btn.selected {
 		border-color: var(--color-primary);
-		background: rgba(255,92,16,0.1);
-		color: var(--orange-400);
-		box-shadow: 0 0 0 3px rgba(255,92,16,0.15);
+		background: rgba(20,96,154,0.1);
+		color: var(--blue-400);
+		box-shadow: 0 0 0 3px rgba(20,96,154,0.15);
 	}
 	.amount-custom { color: var(--text-muted); }
 
@@ -985,7 +993,7 @@
 	.toggle-switch {
 		width: 2.5rem; height: 1.4rem;
 		background: var(--border-default);
-		border-radius: var(--radius-full);
+		border-radius: 9999px;
 		position: relative;
 		transition: background var(--duration-normal) var(--ease-out);
 		flex-shrink: 0;
@@ -1008,7 +1016,7 @@
 		padding: var(--space-4) var(--space-5);
 		background: var(--bg-elevated);
 		border: 2px solid var(--border-subtle);
-		border-radius: var(--radius-xl);
+		border-radius: 0;
 		cursor: pointer;
 		transition: all var(--duration-normal) var(--ease-out);
 		text-align: left;
@@ -1021,8 +1029,8 @@
 	.payment-option:hover { border-color: var(--color-primary); }
 	.payment-option.selected {
 		border-color: var(--color-primary);
-		background: rgba(255,92,16,0.05);
-		box-shadow: 0 0 0 3px rgba(255,92,16,0.12);
+		background: rgba(20,96,154,0.05);
+		box-shadow: 0 0 0 3px rgba(20,96,154,0.12);
 	}
 
 	.payment-option-header { display: flex; align-items: center; gap: var(--space-4); }
@@ -1053,7 +1061,7 @@
 	.bank-details {
 		background: rgba(255,255,255,0.03);
 		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-lg);
+		border-radius: 0;
 		padding: var(--space-4);
 	}
 	.bank-title { font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: var(--space-3); }
@@ -1066,11 +1074,11 @@
 	.manual-fields { display: flex; flex-direction: column; gap: var(--space-4); }
 	.manual-instruction {
 		padding: var(--space-4);
-		background: rgba(251,191,36,0.08);
-		border: 1px solid rgba(251,191,36,0.2);
-		border-radius: var(--radius-lg);
+		background: rgba(20,96,154,0.08);
+		border: 1px solid rgba(20,96,154,0.2);
+		border-radius: 0;
 		font-size: var(--text-sm);
-		color: var(--gold-400);
+		color: var(--blue-400);
 		line-height: 1.6;
 	}
 
@@ -1081,7 +1089,7 @@
 		padding: var(--space-4);
 		background: rgba(96,165,250,0.08);
 		border: 1px solid rgba(96,165,250,0.2);
-		border-radius: var(--radius-lg);
+		border-radius: 0;
 		font-size: var(--text-sm);
 		color: var(--color-info);
 		line-height: 1.6;
@@ -1091,7 +1099,7 @@
 	.donation-summary {
 		background: var(--bg-elevated);
 		border: 1px solid var(--border-default);
-		border-radius: var(--radius-lg);
+		border-radius: 0;
 		padding: var(--space-5);
 		display: flex;
 		flex-direction: column;

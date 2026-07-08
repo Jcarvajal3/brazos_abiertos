@@ -3,6 +3,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { formatCurrency, formatDateTime, getPaymentMethodLabel } from '$lib/utils/formatters';
+	import { getAreaIconName } from '$lib/utils/iconMap';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -51,7 +52,7 @@
 				style="
 					left: {Math.random() * 100}%;
 					animation-delay: {Math.random() * 0.8}s;
-					background: {['#FF5C10','#FBBF24','#FF7A3A','#FCD34D','#ffffff'][i % 5]};
+					background: {['#14609A','#518fbe','#0c3d61','#9fc1db','#ffffff'][i % 5]};
 					width: {6 + Math.random() * 8}px;
 					height: {6 + Math.random() * 8}px;
 					border-radius: {Math.random() > 0.5 ? '50%' : '2px'};
@@ -97,7 +98,7 @@
 			<!-- Donation Summary Card -->
 			<div class="summary-card">
 				<div class="summary-header">
-					<span class="summary-area-icon">{d.area?.icon}</span>
+					<span class="summary-area-icon"><span class="material-symbols-outlined" style="font-size:1.75rem;vertical-align:middle;">{getAreaIconName(d.area?.icon)}</span></span>
 					<div>
 						<p class="summary-area-name">{d.area?.name}</p>
 						{#if d.project}
@@ -253,9 +254,9 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(251, 191, 36, 0.1);
-		border: 2px solid rgba(251, 191, 36, 0.3);
-		color: var(--gold-400);
+		background: rgba(20, 96, 154, 0.1);
+		border: 2px solid rgba(20, 96, 154, 0.3);
+		color: var(--blue-400);
 		transition: all 0.4s;
 	}
 	.success-icon.confirmed {
@@ -297,7 +298,7 @@
 		width: 100%;
 		background: var(--bg-elevated);
 		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-xl);
+		border-radius: 0;
 		overflow: hidden;
 	}
 	.summary-header {
@@ -306,7 +307,7 @@
 		gap: var(--space-3);
 		padding: var(--space-5);
 		border-bottom: 1px solid var(--border-subtle);
-		background: rgba(255, 92, 16, 0.04);
+		background: rgba(20, 96, 154, 0.04);
 		text-align: left;
 	}
 	.summary-area-icon { font-size: 1.75rem; flex-shrink: 0; }
@@ -334,7 +335,7 @@
 	.summary-row { display: flex; justify-content: space-between; font-size: var(--text-sm); }
 	.summary-row span { color: var(--text-muted); }
 	.summary-row strong { color: var(--text-primary); font-weight: 600; }
-	.donation-id { font-family: monospace; font-size: var(--text-xs); background: var(--bg-base); padding: 2px 6px; border-radius: 4px; color: var(--text-secondary); }
+	.donation-id { font-family: monospace; font-size: var(--text-xs); background: var(--bg-base); padding: 2px 6px; border-radius: 0; color: var(--text-secondary); }
 
 	.donor-message { padding: var(--space-4) var(--space-5); border-top: 1px solid var(--border-subtle); text-align: left; }
 	.donor-message-label { font-size: var(--text-xs); color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-2); }
@@ -347,13 +348,13 @@
 		gap: var(--space-4);
 		align-items: flex-start;
 		padding: var(--space-5);
-		background: rgba(251, 191, 36, 0.06);
-		border: 1px solid rgba(251, 191, 36, 0.2);
-		border-radius: var(--radius-xl);
+		background: rgba(20, 96, 154, 0.06);
+		border: 1px solid rgba(20, 96, 154, 0.2);
+		border-radius: 0;
 		text-align: left;
 	}
 	.manual-notice-icon { font-size: 1.5rem; flex-shrink: 0; }
-	.manual-notice-title { font-size: var(--text-sm); font-weight: 700; color: var(--gold-400); margin-bottom: var(--space-1); }
+	.manual-notice-title { font-size: var(--text-sm); font-weight: 700; color: var(--blue-400); margin-bottom: var(--space-1); }
 	.manual-notice-text { font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.6; }
 	.manual-notice-text strong { color: var(--text-primary); }
 
@@ -369,7 +370,7 @@
 		width: 20px;
 		height: 20px;
 		border: 2px solid var(--border-subtle);
-		border-top-color: var(--orange-400);
+		border-top-color: var(--blue-400);
 		border-radius: 50%;
 		animation: spin 0.8s linear infinite;
 		flex-shrink: 0;

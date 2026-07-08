@@ -7,12 +7,20 @@
 	import { formatCurrency, getDonorDisplayName, formatRelativeTime } from '$lib/utils/formatters';
 	import type { PageData } from './$types';
 	import type { Donation } from '$lib/types';
+	import { getAreaIconName } from '$lib/utils/iconMap';
 
 	let { data }: { data: PageData } = $props();
 
 	// Real-time feed state — starts with SSR data
 	let recentDonations = $state(data.recentDonations ?? []);
 	let stats = $state(data.stats);
+	let expenseStats = $state(data.expenseStats);
+
+	// UI state
+	let showIncomeModal = $state(false);
+	let showExpenseModal = $state(false);
+	let activeTab = $state('all'); // 'all' or area slug
+	let expenseImageModal = $state<string | null>(null); // URL for receipt image lightbox
 
 	const supabase = createSupabaseClient();
 	let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -25,6 +33,13 @@
 			.slice(0, 2)
 			.toUpperCase();
 	}
+
+	// Filtered donations based on active tab
+	const filteredDonations = $derived(
+		activeTab === 'all'
+			? recentDonations
+			: recentDonations.filter((d: any) => d.area?.slug === activeTab)
+	);
 
 	onMount(() => {
 		// Subscribe to new confirmed donations in real time
@@ -39,7 +54,6 @@
 					filter: 'payment_status=eq.confirmed'
 				},
 				async (payload) => {
-					// Fetch the full donation with area relation
 					const { data: newDonation } = await supabase
 						.from('donations')
 						.select('id, donor_name, is_anonymous, amount, currency, confirmed_at, area:areas(name, icon, slug)')
@@ -48,9 +62,7 @@
 
 					if (newDonation) {
 						const d = newDonation as any;
-						// Prepend new donation and keep last 12
-						recentDonations = [d, ...recentDonations].slice(0, 12);
-						// Update stats
+						recentDonations = [d, ...recentDonations].slice(0, 50);
 						if (d.currency === 'USD') {
 							stats = { ...stats, total_raised_usd: stats.total_raised_usd + d.amount, total_donations: stats.total_donations + 1 };
 						} else {
@@ -65,181 +77,214 @@
 	onDestroy(() => {
 		if (channel) supabase.removeChannel(channel);
 	});
+
+	function formatDate(dateStr: string) {
+		return new Date(dateStr).toLocaleDateString('es-VE', {
+			year: 'numeric', month: 'short', day: 'numeric'
+		});
+	}
 </script>
 
 <svelte:head>
-	<title>Brazos Abiertos con Venezuela — Dona y reconstruye vidas</title>
-	<meta name="description" content="Plataforma de donaciones para las víctimas del terremoto de Venezuela 2026. Cada donación ayuda a reconstruir vidas. Dona ahora con Stripe, Pago Móvil o Transferencia." />
-	<meta property="og:title" content="Brazos Abiertos con Venezuela" />
-	<meta property="og:description" content="Dona para ayudar a las víctimas del terremoto de Venezuela 2026." />
+	<title>Brazos Abiertos Fundacion — Dona y reconstruye vidas</title>
+	<meta name="description" content="Plataforma de donaciones para las victimas del terremoto de Venezuela 2026. Cada donacion ayuda a reconstruir vidas. Dona ahora con Stripe, Pago Movil o Transferencia." />
+	<meta property="og:title" content="Brazos Abiertos Fundacion" />
+	<meta property="og:description" content="Dona para ayudar a las victimas del terremoto de Venezuela 2026." />
 </svelte:head>
 
-<!-- ─── HERO ─────────────────────────────────────────────────── -->
+<!-- HERO -->
 <section class="hero">
+	<div class="hero-bg" aria-hidden="true">
+		<img src="/images/hero-bg.png" alt="" class="hero-bg-img" />
+	</div>
+	<div class="hero-overlay" aria-hidden="true"></div>
 	<div class="container">
 		<div class="hero-inner">
-			<div class="hero-content">
-				<div class="animate-fade-in-up">
-					<span class="hero-tag">🇻🇪 Emergencia Venezuela 2026</span>
-				</div>
-
-				<h1 class="hero-title animate-fade-in-up delay-100">
-					Abre tus <span class="text-gradient">brazos</span><br />a Venezuela
-				</h1>
-
-				<p class="hero-subtitle animate-fade-in-up delay-200">
-					El terremoto dejó miles de familias sin hogar, sin alimentos y sin esperanza.
-					Tu donación llega directamente a quienes más lo necesitan, con total transparencia.
-				</p>
-
-				<div class="hero-actions animate-fade-in-up delay-300">
-					<Button href="/donar" variant="primary" size="xl">
-						❤️ Donar ahora
-					</Button>
-					<Button href="/proyectos" variant="outline" size="xl">
-						Ver proyectos
-					</Button>
-				</div>
-
-				<div class="hero-trust animate-fade-in-up delay-400">
-					<div class="trust-badge">
-						<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
-						Pagos seguros con Stripe
-					</div>
-					<div class="trust-badge">
-						<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-						100% transparente
-					</div>
-					<div class="trust-badge">
-						<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg>
-						Tiempo real
-					</div>
-				</div>
+			<div class="animate-fade-in-up">
+				<span class="hero-tag">Emergencia Venezuela 2026</span>
 			</div>
 
-			<!-- Hero image placeholder -->
-			<div class="hero-image animate-fade-in delay-300">
-				<div class="hero-image-placeholder">
-					<span class="hero-image-icon">🤝</span>
-					<p class="hero-image-text">Unidos por Venezuela</p>
+			<h1 class="hero-title animate-fade-in-up delay-100">
+				Abre tus brazos<br />a Venezuela
+			</h1>
+
+			<p class="hero-subtitle animate-fade-in-up delay-200">
+				El terremoto dejo miles de familias sin hogar, sin alimentos y sin esperanza.
+				Tu donacion llega directamente a quienes mas lo necesitan, con total transparencia.
+			</p>
+
+			<div class="hero-actions animate-fade-in-up delay-300">
+				<Button href="/donar" variant="primary" size="xl">
+					Donar ahora
+				</Button>
+				<a href="/proyectos" class="btn btn-outline-light btn-xl">
+					Ver proyectos
+				</a>
+			</div>
+
+			<div class="hero-trust animate-fade-in-up delay-400">
+				<div class="trust-badge">
+					<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+					Pagos seguros con Stripe
+				</div>
+				<div class="trust-badge">
+					<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+					100% transparente
+				</div>
+				<div class="trust-badge">
+					<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg>
+					Tiempo real
 				</div>
 			</div>
 		</div>
 	</div>
 </section>
 
-<!-- ─── METRICS + RECENT DONATIONS ─────────────────────────── -->
-<section class="section metrics-section">
+<!-- INGRESOS vs EGRESOS -->
+<section class="section finance-section">
 	<div class="container">
-		<div class="metrics-wrapper">
-			<!-- Left: Metrics stacked vertically -->
-			<div class="metrics-column">
-				<h2 class="metrics-title">Impacto en <span class="text-gradient">tiempo real</span></h2>
-				<p class="metrics-subtitle">Cada donación es transparente y verificable. Mira cómo crece el apoyo.</p>
+		<div class="section-heading">
+			<span class="eyebrow">Transparencia total</span>
+			<h2>Tus fondos, <span class="text-gradient">tu control</span></h2>
+			<p>Cada bolivar y cada dolar que ingresa y sale se muestra aqui. Sin excepciones.</p>
+		</div>
 
-				<div class="metrics-stack">
-					<div class="metric-row animate-fade-in-up">
-						<div class="metric-icon metric-icon-orange">
-							<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/></svg>
+		<div class="finance-panel animate-fade-in-up">
+			<div class="finance-grid">
+				<!-- INGRESOS -->
+				<div class="finance-block finance-income">
+					<span class="finance-label">Ingresos totales</span>
+					<span class="finance-amount finance-amount-income">
+						$<AnimatedCounter
+							value={stats.total_raised_usd}
+							format={(v) => Math.round(v).toLocaleString('en-US')}
+						/>
+					</span>
+					{#if stats.total_raised_ves > 0}
+						<span class="finance-secondary">
+							Bs.<AnimatedCounter
+								value={stats.total_raised_ves}
+								format={(v) => Math.round(v).toLocaleString('es-VE')}
+							/>
+						</span>
+					{/if}
+					<button class="btn btn-outline btn-sm finance-btn" onclick={() => (showIncomeModal = true)}>
+						Ver detalles
+					</button>
+				</div>
+
+				<!-- DIVIDER -->
+				<div class="finance-divider" aria-hidden="true">
+					<div class="finance-divider-line"></div>
+				</div>
+
+				<!-- EGRESOS -->
+				<div class="finance-block finance-expense">
+					<span class="finance-label">Egresos totales</span>
+					<span class="finance-amount finance-amount-expense">
+						$<AnimatedCounter
+							value={expenseStats.total_expenses_usd}
+							format={(v) => Math.round(v).toLocaleString('en-US')}
+						/>
+					</span>
+					{#if expenseStats.total_expenses_ves > 0}
+						<span class="finance-secondary">
+							Bs.<AnimatedCounter
+								value={expenseStats.total_expenses_ves}
+								format={(v) => Math.round(v).toLocaleString('es-VE')}
+							/>
+						</span>
+					{/if}
+					<button class="btn btn-outline btn-sm finance-btn" onclick={() => (showExpenseModal = true)}>
+						Ver detalles
+					</button>
+				</div>
+			</div>
+
+			<!-- CTA Button -->
+			<div class="finance-cta">
+				<Button href="/donar" variant="primary" size="lg">Donar aqui</Button>
+			</div>
+		</div>
+	</div>
+</section>
+
+<!-- DONACIONES EN VIVO -->
+<section class="section livefeed-section">
+	<div class="container">
+		<div class="livefeed-header">
+			<div>
+				<h2 class="livefeed-title">Donaciones en vivo</h2>
+				<p class="livefeed-subtitle">Mira en tiempo real como llegan las donaciones.</p>
+			</div>
+			<span class="live-badge">
+				<span class="live-dot"></span> EN VIVO
+			</span>
+		</div>
+
+		<!-- Area Tabs -->
+		<div class="feed-tabs" role="tablist" aria-label="Filtrar donaciones por area">
+			<button
+				class="feed-tab"
+				class:active={activeTab === 'all'}
+				onclick={() => (activeTab = 'all')}
+				role="tab"
+				aria-selected={activeTab === 'all'}
+			>Todas</button>
+			{#each data.areas as area}
+				<button
+					class="feed-tab"
+					class:active={activeTab === area.slug}
+					onclick={() => (activeTab = area.slug)}
+					role="tab"
+					aria-selected={activeTab === area.slug}
+				>
+					<span class="material-symbols-outlined feed-tab-icon" style="color:{area.color};">{getAreaIconName(area.icon)}</span>
+					{area.name}
+				</button>
+			{/each}
+		</div>
+
+		<!-- Donation Feed -->
+		{#if filteredDonations.length === 0}
+			<div class="feed-empty">
+				<span class="material-symbols-outlined" style="font-size:2.5rem;color:var(--text-muted);">volunteer_activism</span>
+				<p>{activeTab === 'all' ? 'Se el primero en donar' : 'Sin donaciones en esta area aun'}</p>
+				<Button href="/donar" variant="primary" size="sm">Hacer una donacion</Button>
+			</div>
+		{:else}
+			<div class="feed-list" id="donation-feed" aria-live="polite" aria-label="Lista de donaciones recientes">
+				{#each filteredDonations.slice(0, 12) as d (d.id)}
+					<div class="feed-row">
+						<div class="avatar avatar-orange" style="width:2.25rem;height:2.25rem;font-size:0.7rem;">
+							{d.is_anonymous ? '?' : getInitials(getDonorDisplayName(d.is_anonymous, d.donor_name))}
 						</div>
-						<div class="metric-info">
-							<span class="metric-label">Total recaudado (USD)</span>
-							<span class="metric-value">
-								$<AnimatedCounter
-									value={stats.total_raised_usd}
-									format={(v) => Math.round(v).toLocaleString('en-US')}
-								/>
+						<div class="feed-info">
+							<span class="feed-name">{getDonorDisplayName(d.is_anonymous, d.donor_name)}</span>
+							<span class="feed-meta">
+								<span class="material-symbols-outlined" style="font-size:0.75rem;vertical-align:middle;">{getAreaIconName(d.area?.icon)}</span>
+								{d.area?.name}
+								{#if d.confirmed_at}
+									<span class="feed-time">· {formatRelativeTime(d.confirmed_at)}</span>
+								{/if}
 							</span>
 						</div>
+						<span class="feed-amount">{formatCurrency(d.amount, d.currency)}</span>
 					</div>
-
-					{#if stats.total_raised_ves > 0}
-						<div class="metric-row animate-fade-in-up delay-100">
-							<div class="metric-icon metric-icon-gold">
-								<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.736 6.979C9.208 6.193 9.696 6 10 6c.304 0 .792.193 1.264.979a1 1 0 001.715-1.029C12.279 4.784 11.232 4 10 4s-2.279.784-2.979 1.95c-.285.475-.507 1-.67 1.55H6a1 1 0 000 2h.013a9.358 9.358 0 000 1H6a1 1 0 100 2h.351c.163.55.385 1.075.67 1.55C7.721 15.216 8.768 16 10 16s2.279-.784 2.979-1.95a1 1 0 10-1.715-1.029c-.472.786-.96.979-1.264.979-.304 0-.792-.193-1.264-.979a5.389 5.389 0 01-.421-.821H10a1 1 0 100-2H8.076a7.33 7.33 0 010-1H10a1 1 0 100-2H8.315c.128-.29.272-.56.421-.821z" clip-rule="evenodd"/></svg>
-							</div>
-							<div class="metric-info">
-								<span class="metric-label">Total recaudado (VES)</span>
-								<span class="metric-value metric-value-gold">
-									Bs.<AnimatedCounter
-										value={stats.total_raised_ves}
-										format={(v) => Math.round(v).toLocaleString('es-VE')}
-									/>
-								</span>
-							</div>
-						</div>
-					{/if}
-
-					<div class="metric-row animate-fade-in-up delay-200">
-						<div class="metric-icon metric-icon-green">
-							<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/></svg>
-						</div>
-						<div class="metric-info">
-							<span class="metric-label">Donantes únicos</span>
-							<span class="metric-value"><AnimatedCounter value={Number(stats.total_donors)} /></span>
-						</div>
-					</div>
-
-					<div class="metric-row animate-fade-in-up delay-300">
-						<div class="metric-icon metric-icon-blue">
-							<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"/></svg>
-						</div>
-						<div class="metric-info">
-							<span class="metric-label">Total donaciones</span>
-							<span class="metric-value"><AnimatedCounter value={Number(stats.total_donations)} /></span>
-						</div>
-					</div>
-				</div>
+				{/each}
 			</div>
-
-			<!-- Right: Recent donations table -->
-			<div class="donations-panel animate-fade-in-up delay-200">
-				<div class="donations-header">
-					<h3 class="donations-title">Donaciones recientes</h3>
-					<span class="live-badge">
-						<span class="live-dot"></span> EN VIVO
-					</span>
-				</div>
-
-				{#if recentDonations.length === 0}
-					<div class="donations-empty">
-						<p>Sé el primero en donar 💛</p>
-						<Button href="/donar" variant="primary" size="sm">Hacer la primera donación</Button>
-					</div>
-				{:else}
-					<div class="donations-list" id="donation-feed" aria-live="polite" aria-label="Lista de donaciones recientes">
-						{#each recentDonations.slice(0, 8) as d (d.id)}
-							<div class="donation-row">
-								<div class="avatar avatar-orange" style="width:2.25rem;height:2.25rem;font-size:0.7rem;">
-									{d.is_anonymous ? '?' : getInitials(getDonorDisplayName(d.is_anonymous, d.donor_name))}
-								</div>
-								<div class="donation-info">
-									<span class="donation-name">{getDonorDisplayName(d.is_anonymous, d.donor_name)}</span>
-									<span class="donation-meta">
-										{d.area?.icon} {d.area?.name}
-										{#if d.confirmed_at}
-											<span class="donation-time">· {formatRelativeTime(d.confirmed_at)}</span>
-										{/if}
-									</span>
-								</div>
-								<span class="donation-amount">{formatCurrency(d.amount, d.currency)}</span>
-							</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		</div>
+		{/if}
 	</div>
 </section>
 
-<!-- ─── AREAS / CATEGORIES ─────────────────────────────────────── -->
+<!-- AREAS / CATEGORIES -->
 {#if data.areas.length > 0}
 <section class="section areas-section">
 	<div class="container">
 		<div class="section-heading">
-			<span class="eyebrow">Áreas de impacto</span>
-			<h2>¿Dónde quieres <span class="text-gradient">ayudar?</span></h2>
-			<p>Selecciona el área donde deseas dirigir tu donación. Cada contribución marca la diferencia.</p>
+			<span class="eyebrow">Areas de impacto</span>
+			<h2>Donde quieres <span class="text-gradient">ayudar</span></h2>
+			<p>Selecciona el area donde deseas dirigir tu donacion. Cada contribucion marca la diferencia.</p>
 		</div>
 
 		<div class="areas-grid">
@@ -251,12 +296,14 @@
 					id="area-{area.slug}"
 				>
 					<div class="area-icon" style="background: {area.color}12; border-color: {area.color}30;">
-						<span style="font-size: 1.75rem;" role="img" aria-label={area.name}>{area.icon}</span>
+						<span class="material-symbols-outlined" style="font-size: 1.5rem; color: {area.color};" aria-label={area.name}>
+							{getAreaIconName(area.icon)}
+						</span>
 					</div>
 					<h3 class="area-name">{area.name}</h3>
 					<p class="area-desc">{area.description}</p>
 					<span class="area-cta">
-						Donar aquí
+						Donar aqui
 						<svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
 							<path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
 						</svg>
@@ -268,7 +315,7 @@
 </section>
 {/if}
 
-<!-- ─── FEATURED PROJECTS ──────────────────────────────────────── -->
+<!-- FEATURED PROJECTS -->
 {#if data.featuredProjects.length > 0}
 <section class="section projects-section">
 	<div class="container">
@@ -285,18 +332,18 @@
 					{#if project.cover_image_url}
 						<img src={project.cover_image_url} alt={project.name} class="project-img" loading="lazy" />
 					{:else}
-						<div class="project-img-placeholder" style="background:{project.area?.color ?? '#F97316'}12;">
-							<span style="font-size:3rem;">{project.area?.icon ?? '🎯'}</span>
+						<div class="project-img-placeholder" style="background:{project.area?.color ?? '#14609A'}12;">
+							<span class="material-symbols-outlined" style="font-size:3rem; color:{project.area?.color ?? '#14609A'};">volunteer_activism</span>
 						</div>
 					{/if}
 
 					<div class="project-body">
 						<div class="project-meta">
-							<span class="badge badge-muted">{project.area?.icon} {project.area?.name}</span>
+							<span class="badge badge-muted">{project.area?.name}</span>
 						</div>
 						<h3 class="project-name">{project.name}</h3>
 						<p class="project-ong">{project.ong_name}</p>
-						<p class="project-desc">{project.description.slice(0, 120)}…</p>
+						<p class="project-desc">{project.description.slice(0, 120)}...</p>
 
 						{#if project.goal_amount}
 							<div class="project-progress">
@@ -317,13 +364,13 @@
 		</div>
 
 		<div class="projects-cta">
-			<Button href="/proyectos" variant="outline">Ver todos los proyectos →</Button>
+			<Button href="/proyectos" variant="outline">Ver todos los proyectos</Button>
 		</div>
 	</div>
 </section>
 {/if}
 
-<!-- ─── CTA DONAR CON FOTOS ─────────────────────────────────────── -->
+<!-- CTA DONAR CON FOTOS -->
 <section class="cta-section">
 	<div class="container">
 		<div class="cta-wrapper">
@@ -331,15 +378,15 @@
 			<div class="cta-images animate-fade-in-up">
 				<div class="cta-image-large">
 					<img src="/images/cta-rebuilding.png" alt="Comunidad reconstruyendo hogares tras el terremoto" loading="lazy" />
-					<span class="cta-image-overlay">Reconstrucción</span>
+					<span class="cta-image-overlay">Reconstruccion</span>
 				</div>
 				<div class="cta-image-stack">
 					<div class="cta-image-small">
 						<img src="/images/cta-volunteers.png" alt="Voluntarios distribuyendo alimentos" loading="lazy" />
-						<span class="cta-image-overlay">Alimentación</span>
+						<span class="cta-image-overlay">Alimentacion</span>
 					</div>
 					<div class="cta-image-small">
-						<img src="/images/cta-healthcare.png" alt="Profesional de salud atendiendo a niños" loading="lazy" />
+						<img src="/images/cta-healthcare.png" alt="Profesional de salud atendiendo a ninos" loading="lazy" />
 						<span class="cta-image-overlay">Salud</span>
 					</div>
 				</div>
@@ -348,9 +395,9 @@
 			<!-- Right: CTA content -->
 			<div class="cta-content animate-fade-in-up delay-200">
 				<span class="cta-eyebrow">Tu apoyo importa</span>
-				<h2 class="cta-title">Cada donación<br />reconstruye una <span class="text-gradient">vida</span></h2>
+				<h2 class="cta-title">Cada donacion<br />reconstruye una <span class="text-gradient">vida</span></h2>
 				<p class="cta-desc">
-					Miles de familias venezolanas necesitan tu ayuda ahora. Tu contribución,
+					Miles de familias venezolanas necesitan tu ayuda ahora. Tu contribucion,
 					sin importar el monto, genera un impacto real y medible. Juntos
 					podemos reconstruir comunidades enteras.
 				</p>
@@ -368,33 +415,242 @@
 				</div>
 
 				<div class="cta-actions">
-					<Button href="/donar" variant="primary" size="xl">❤️ Donar ahora</Button>
-					<Button href="/proyectos/registrar" variant="ghost" size="sm">¿Eres una ONG? Regístrate</Button>
+					<Button href="/donar" variant="primary" size="xl">Donar ahora</Button>
 				</div>
 			</div>
 		</div>
 	</div>
 </section>
 
+<!-- ═══════ MODALS ═══════ -->
+
+<!-- INCOME DETAIL MODAL -->
+{#if showIncomeModal}
+	<div class="modal-backdrop" onclick={() => (showIncomeModal = false)} role="dialog" aria-modal="true" aria-label="Detalle de ingresos">
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<div class="modal-content modal-lg" onclick={(e) => e.stopPropagation()}>
+			<div class="modal-header">
+				<div>
+					<h2 class="modal-title">Historial de ingresos</h2>
+					<p class="modal-subtitle">Todas las donaciones confirmadas</p>
+				</div>
+				<button class="modal-close" onclick={() => (showIncomeModal = false)} aria-label="Cerrar">
+					<span class="material-symbols-outlined">close</span>
+				</button>
+			</div>
+
+			<div class="modal-stats-bar">
+				<div class="modal-stat">
+					<span class="modal-stat-label">Total USD</span>
+					<span class="modal-stat-value">{formatCurrency(stats.total_raised_usd, 'USD')}</span>
+				</div>
+				{#if stats.total_raised_ves > 0}
+					<div class="modal-stat">
+						<span class="modal-stat-label">Total VES</span>
+						<span class="modal-stat-value">{formatCurrency(stats.total_raised_ves, 'VES')}</span>
+					</div>
+				{/if}
+				<div class="modal-stat">
+					<span class="modal-stat-label">Total donaciones</span>
+					<span class="modal-stat-value">{stats.total_donations}</span>
+				</div>
+			</div>
+
+			<div class="modal-table-wrap">
+				{#if recentDonations.length === 0}
+					<div class="modal-empty">
+						<p>Sin donaciones registradas aun.</p>
+					</div>
+				{:else}
+					<table class="modal-table">
+						<thead>
+							<tr>
+								<th>Donante</th>
+								<th>Area</th>
+								<th>Monto</th>
+								<th>Fecha</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each recentDonations as d (d.id)}
+								<tr>
+									<td>
+										<div class="table-donor">
+											<div class="avatar avatar-orange" style="width:1.75rem;height:1.75rem;font-size:0.6rem;">
+												{d.is_anonymous ? '?' : getInitials(getDonorDisplayName(d.is_anonymous, d.donor_name))}
+											</div>
+											<span>{getDonorDisplayName(d.is_anonymous, d.donor_name)}</span>
+										</div>
+									</td>
+									<td>
+										<span class="table-area">
+											<span class="material-symbols-outlined" style="font-size:0.85rem;">{getAreaIconName(d.area?.icon)}</span>
+											{d.area?.name}
+										</span>
+									</td>
+									<td class="table-amount">{formatCurrency(d.amount, d.currency)}</td>
+									<td class="table-date">{d.confirmed_at ? formatDate(d.confirmed_at) : '—'}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				{/if}
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- EXPENSE DETAIL MODAL -->
+{#if showExpenseModal}
+	<div class="modal-backdrop" onclick={() => (showExpenseModal = false)} role="dialog" aria-modal="true" aria-label="Detalle de egresos">
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<div class="modal-content modal-lg" onclick={(e) => e.stopPropagation()}>
+			<div class="modal-header">
+				<div>
+					<h2 class="modal-title">Historial de egresos</h2>
+					<p class="modal-subtitle">Desembolsos y gastos verificables</p>
+				</div>
+				<button class="modal-close" onclick={() => (showExpenseModal = false)} aria-label="Cerrar">
+					<span class="material-symbols-outlined">close</span>
+				</button>
+			</div>
+
+			<div class="modal-stats-bar">
+				<div class="modal-stat">
+					<span class="modal-stat-label">Total USD</span>
+					<span class="modal-stat-value">{formatCurrency(expenseStats.total_expenses_usd, 'USD')}</span>
+				</div>
+				{#if expenseStats.total_expenses_ves > 0}
+					<div class="modal-stat">
+						<span class="modal-stat-label">Total VES</span>
+						<span class="modal-stat-value">{formatCurrency(expenseStats.total_expenses_ves, 'VES')}</span>
+					</div>
+				{/if}
+				<div class="modal-stat">
+					<span class="modal-stat-label">Total registros</span>
+					<span class="modal-stat-value">{expenseStats.total_expense_records}</span>
+				</div>
+			</div>
+
+			<div class="modal-table-wrap">
+				{#if (data.recentExpenses ?? []).length === 0}
+					<div class="modal-empty">
+						<span class="material-symbols-outlined" style="font-size:2rem;color:var(--text-muted);">receipt_long</span>
+						<p>Sin egresos registrados aun.</p>
+						<span class="modal-empty-hint">Los egresos se registran desde el panel de administracion.</span>
+					</div>
+				{:else}
+					<table class="modal-table">
+						<thead>
+							<tr>
+								<th>Concepto</th>
+								<th>Area</th>
+								<th>Monto</th>
+								<th>Fecha</th>
+								<th>Factura</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each data.recentExpenses as exp}
+								<tr>
+									<td>
+										<div class="table-expense-concept">
+											<strong>{exp.concept}</strong>
+											{#if exp.vendor}
+												<span class="table-vendor">{exp.vendor}</span>
+											{/if}
+										</div>
+									</td>
+									<td>
+										<span class="table-area">
+											<span class="material-symbols-outlined" style="font-size:0.85rem;">{getAreaIconName(exp.area?.icon)}</span>
+											{exp.area?.name}
+										</span>
+									</td>
+									<td class="table-amount">{formatCurrency(exp.amount, exp.currency)}</td>
+									<td class="table-date">{formatDate(exp.expense_date)}</td>
+									<td>
+										{#if exp.receipt_image_url}
+											<button class="receipt-btn" onclick={() => (expenseImageModal = exp.receipt_image_url)} aria-label="Ver factura">
+												<span class="material-symbols-outlined" style="font-size:1rem;">image</span>
+												Ver
+											</button>
+										{:else if exp.receipt_image_urls?.length}
+											<button class="receipt-btn" onclick={() => (expenseImageModal = exp.receipt_image_urls[0])} aria-label="Ver factura">
+												<span class="material-symbols-outlined" style="font-size:1rem;">image</span>
+												Ver ({exp.receipt_image_urls.length})
+											</button>
+										{:else}
+											<span class="table-no-receipt">—</span>
+										{/if}
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				{/if}
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- RECEIPT IMAGE LIGHTBOX -->
+{#if expenseImageModal}
+	<div class="modal-backdrop lightbox-backdrop" onclick={() => (expenseImageModal = null)} role="dialog" aria-modal="true" aria-label="Imagen de factura">
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<div class="lightbox-content" onclick={(e) => e.stopPropagation()}>
+			<button class="modal-close lightbox-close" onclick={() => (expenseImageModal = null)} aria-label="Cerrar">
+				<span class="material-symbols-outlined">close</span>
+			</button>
+			<img src={expenseImageModal} alt="Factura / Recibo" class="lightbox-img" />
+		</div>
+	</div>
+{/if}
+
 <style>
-	/* ─── Hero ──────────────────────────────── */
+	/* --- Hero ----------------------------------- */
 	.hero {
 		position: relative;
-		min-height: 90vh;
+		min-height: 85vh;
 		display: flex;
 		align-items: center;
+		justify-content: center;
 		overflow: hidden;
 		padding-block: var(--space-24) var(--space-16);
-		background: linear-gradient(180deg, var(--orange-50) 0%, #ffffff 60%);
+	}
+
+	.hero-bg {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+	}
+
+	.hero-bg-img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: center top;
+	}
+
+	.hero-overlay {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		background: linear-gradient(
+			180deg,
+			rgba(10, 47, 80, 0.75) 0%,
+			rgba(20, 96, 154, 0.6) 50%,
+			rgba(10, 47, 80, 0.85) 100%
+		);
 	}
 
 	.hero-inner {
 		position: relative;
-		z-index: 1;
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: var(--space-12);
+		z-index: 2;
+		display: flex;
+		flex-direction: column;
 		align-items: center;
+		text-align: center;
 	}
 
 	.hero-tag {
@@ -402,30 +658,35 @@
 		align-items: center;
 		gap: var(--space-2);
 		padding: var(--space-2) var(--space-4);
-		border-radius: var(--radius-full);
-		background: var(--orange-50);
-		border: 1px solid var(--orange-200);
+		border-radius: 0;
+		background: rgba(255, 255, 255, 0.12);
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		font-family: var(--font-display);
 		font-size: var(--text-sm);
 		font-weight: 600;
-		color: var(--orange-700);
+		color: #ffffff;
 		margin-bottom: var(--space-6);
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		backdrop-filter: blur(4px);
 	}
 
 	.hero-title {
-		font-size: clamp(2.75rem, 6vw, 4.5rem);
+		font-size: clamp(2.5rem, 6vw, 4.5rem);
 		font-weight: 900;
 		line-height: 1.05;
 		letter-spacing: -0.04em;
 		margin-bottom: var(--space-6);
-		color: var(--text-primary);
+		color: #ffffff;
+		text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
 	}
 
 	.hero-subtitle {
 		font-size: clamp(var(--text-base), 2vw, var(--text-xl));
-		color: var(--text-secondary);
+		color: rgba(255, 255, 255, 0.85);
 		line-height: 1.7;
-		max-width: 520px;
+		max-width: 600px;
+		margin-inline: auto;
 		margin-bottom: var(--space-10);
 	}
 
@@ -433,15 +694,51 @@
 		display: flex;
 		gap: var(--space-4);
 		flex-wrap: wrap;
+		justify-content: center;
 		margin-bottom: var(--space-8);
 	}
 
-	/* Trust badges */
+	.hero-actions :global(.btn-primary) {
+		background: #ffffff;
+		color: var(--blue-700);
+		border-color: #ffffff;
+	}
+
+	.hero-actions :global(.btn-primary:hover) {
+		background: var(--blue-50);
+		color: var(--blue-800);
+		border-color: var(--blue-50);
+	}
+
+	.btn-outline-light {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: var(--space-2);
+		padding: var(--space-4) var(--space-8);
+		font-family: var(--font-display);
+		font-size: var(--text-base);
+		font-weight: 700;
+		text-decoration: none;
+		border-radius: var(--radius-btn);
+		color: #ffffff;
+		background: transparent;
+		border: 2px solid rgba(255, 255, 255, 0.4);
+		cursor: pointer;
+		transition: all var(--duration-normal) var(--ease-out);
+	}
+
+	.btn-outline-light:hover {
+		background: rgba(255, 255, 255, 0.12);
+		border-color: rgba(255, 255, 255, 0.7);
+	}
+
 	.hero-trust {
 		display: flex;
 		align-items: center;
-		gap: var(--space-4);
+		gap: var(--space-5);
 		flex-wrap: wrap;
+		justify-content: center;
 	}
 
 	.trust-badge {
@@ -449,165 +746,145 @@
 		align-items: center;
 		gap: var(--space-2);
 		font-size: var(--text-sm);
-		color: var(--text-secondary);
+		color: rgba(255, 255, 255, 0.7);
 		font-weight: 500;
 	}
 
 	.trust-badge svg {
-		color: var(--orange-500);
+		color: rgba(255, 255, 255, 0.8);
 		flex-shrink: 0;
 	}
 
-	/* Hero image placeholder */
-	.hero-image {
-		display: flex;
-		align-items: center;
-		justify-content: center;
+	/* --- Finance / Ingresos vs Egresos ---------- */
+	.finance-section {
+		background: var(--blue-50);
+		color: var(--text-primary);
+		border-top: 3px solid var(--blue-500);
+		border-bottom: 1px solid var(--border-subtle);
 	}
 
-	.hero-image-placeholder {
-		width: 100%;
-		aspect-ratio: 4/3;
-		border-radius: var(--radius-2xl);
-		background: linear-gradient(135deg, var(--orange-50) 0%, var(--orange-100) 50%, var(--gold-50) 100%);
-		border: 1px solid var(--orange-200);
+	.finance-section :global(.section-heading .eyebrow) {
+		color: var(--blue-600);
+	}
+
+	.finance-section :global(.section-heading h2) {
+		color: var(--text-primary);
+	}
+
+	.finance-section :global(.section-heading p) {
+		color: var(--text-secondary);
+	}
+
+	.finance-panel {
+		max-width: 800px;
+		margin-inline: auto;
+	}
+
+	.finance-grid {
+		display: grid;
+		grid-template-columns: 1fr auto 1fr;
+		align-items: center;
+		gap: 0;
+	}
+
+	.finance-block {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		justify-content: center;
-		gap: var(--space-4);
+		gap: var(--space-3);
+		padding: var(--space-8) var(--space-6);
 	}
 
-	.hero-image-icon {
-		font-size: 4rem;
+	.finance-label {
+		font-family: var(--font-display);
+		font-size: var(--text-xs);
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: var(--text-muted);
 	}
 
-	.hero-image-text {
+	.finance-amount {
+		font-family: var(--font-display);
+		font-size: clamp(var(--text-3xl), 5vw, var(--text-5xl));
+		font-weight: 900;
+		line-height: 1;
+		letter-spacing: -0.03em;
+	}
+
+	.finance-amount-income {
+		color: #16a34a;
+	}
+
+	.finance-amount-expense {
+		color: #dc2626;
+	}
+
+	.finance-secondary {
 		font-family: var(--font-display);
 		font-size: var(--text-lg);
-		font-weight: 700;
-		color: var(--orange-700);
-		opacity: 0.7;
+		font-weight: 600;
+		color: var(--text-muted);
 	}
 
-	/* ─── Metrics + Donations ────────────── */
-	.metrics-section {
+	.finance-btn {
+		margin-top: var(--space-2);
+		background: transparent;
+		color: var(--text-secondary);
+		border-color: var(--border-default);
+	}
+
+	.finance-btn:hover {
+		background: rgba(0, 0, 0, 0.04);
+		color: var(--text-primary);
+		border-color: rgba(0, 0, 0, 0.2);
+	}
+
+	.finance-divider {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding-block: var(--space-4);
+	}
+
+	.finance-divider-line {
+		width: 2px;
+		height: 120px;
+		background: linear-gradient(180deg, transparent, var(--blue-400), transparent);
+	}
+
+	.finance-cta {
+		text-align: center;
+		margin-top: var(--space-8);
+		padding-top: var(--space-8);
+		border-top: 1px solid var(--border-subtle);
+	}
+
+	/* --- Live Feed Section ---------------------- */
+	.livefeed-section {
 		background: var(--bg-secondary);
 		border-top: 1px solid var(--border-subtle);
 		border-bottom: 1px solid var(--border-subtle);
 	}
 
-	.metrics-wrapper {
-		display: grid;
-		grid-template-columns: 1fr 1.1fr;
-		gap: var(--space-12);
-		align-items: start;
-	}
-
-	.metrics-title {
-		font-size: var(--text-3xl);
-		font-weight: 800;
-		margin-bottom: var(--space-3);
-		letter-spacing: -0.03em;
-	}
-
-	.metrics-subtitle {
-		font-size: var(--text-base);
-		color: var(--text-secondary);
-		line-height: 1.6;
-		margin-bottom: var(--space-8);
-	}
-
-	.metrics-stack {
+	.livefeed-header {
 		display: flex;
-		flex-direction: column;
+		align-items: flex-start;
+		justify-content: space-between;
+		margin-bottom: var(--space-6);
 		gap: var(--space-4);
 	}
 
-	.metric-row {
-		display: flex;
-		align-items: center;
-		gap: var(--space-4);
-		padding: var(--space-5);
-		background: var(--bg-card);
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-xl);
-		box-shadow: var(--shadow-sm);
-		transition: box-shadow var(--duration-normal) var(--ease-out),
-		            transform var(--duration-normal) var(--ease-out);
-	}
-
-	.metric-row:hover {
-		box-shadow: var(--shadow-md);
-		transform: translateY(-1px);
-	}
-
-	.metric-icon {
-		width: 2.75rem;
-		height: 2.75rem;
-		border-radius: var(--radius-lg);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
-	}
-
-	.metric-icon svg {
-		color: white;
-	}
-
-	.metric-icon-orange { background: linear-gradient(135deg, var(--orange-400), var(--orange-500)); }
-	.metric-icon-gold   { background: linear-gradient(135deg, var(--gold-400), var(--gold-500)); }
-	.metric-icon-green  { background: linear-gradient(135deg, #34d399, #16a34a); }
-	.metric-icon-blue   { background: linear-gradient(135deg, #60a5fa, #2563eb); }
-
-	.metric-info {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-
-	.metric-label {
-		font-size: var(--text-xs);
-		color: var(--text-muted);
-		font-weight: 500;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-	}
-
-	.metric-value {
-		font-family: var(--font-display);
+	.livefeed-title {
 		font-size: var(--text-2xl);
 		font-weight: 800;
-		color: var(--text-primary);
 		letter-spacing: -0.02em;
 	}
 
-	.metric-value-gold {
-		color: var(--gold-700);
-	}
-
-	/* Donations panel */
-	.donations-panel {
-		background: var(--bg-card);
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-xl);
-		box-shadow: var(--shadow-md);
-		overflow: hidden;
-	}
-
-	.donations-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: var(--space-5) var(--space-6);
-		border-bottom: 1px solid var(--border-subtle);
-	}
-
-	.donations-title {
-		font-size: var(--text-lg);
-		font-weight: 700;
-		color: var(--text-primary);
+	.livefeed-subtitle {
+		font-size: var(--text-sm);
+		color: var(--text-muted);
+		margin-top: var(--space-1);
 	}
 
 	.live-badge {
@@ -621,7 +898,8 @@
 		padding: var(--space-1) var(--space-3);
 		background: rgba(220, 38, 38, 0.06);
 		border: 1px solid rgba(220, 38, 38, 0.15);
-		border-radius: var(--radius-full);
+		border-radius: 0;
+		flex-shrink: 0;
 	}
 
 	.live-dot {
@@ -632,29 +910,79 @@
 		animation: pulse-live 1.4s ease-in-out infinite;
 	}
 
-	.donations-list {
-		padding: var(--space-3);
-		max-height: 480px;
-		overflow-y: auto;
+	/* Feed tabs */
+	.feed-tabs {
+		display: flex;
+		gap: var(--space-1);
+		margin-bottom: var(--space-6);
+		overflow-x: auto;
+		padding-bottom: var(--space-2);
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.feed-tab {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-1-5);
+		padding: var(--space-2) var(--space-4);
+		border-radius: var(--radius-btn);
+		font-family: var(--font-display);
+		font-size: var(--text-sm);
+		font-weight: 600;
+		color: var(--text-secondary);
+		background: transparent;
+		border: 1px solid var(--border-default);
+		cursor: pointer;
+		white-space: nowrap;
+		transition: all var(--duration-fast) var(--ease-out);
+	}
+
+	.feed-tab:hover {
+		background: rgba(0, 0, 0, 0.03);
+		border-color: rgba(0, 0, 0, 0.15);
+	}
+
+	.feed-tab.active {
+		background: var(--blue-500);
+		color: white;
+		border-color: var(--blue-500);
+	}
+
+	.feed-tab.active .feed-tab-icon {
+		color: white !important;
+	}
+
+	.feed-tab-icon {
+		font-size: 1rem;
+	}
+
+	/* Feed list */
+	.feed-list {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-2);
+		max-height: 520px;
+		overflow-y: auto;
 	}
 
-	.donation-row {
+	.feed-row {
 		display: flex;
 		align-items: center;
 		gap: var(--space-3);
 		padding: var(--space-3) var(--space-4);
-		border-radius: var(--radius-lg);
-		transition: background var(--duration-fast) var(--ease-out);
+		background: var(--bg-card);
+		border: 1px solid var(--border-subtle);
+		border-radius: 0;
+		transition: border-color var(--duration-fast) var(--ease-out),
+		            background var(--duration-fast) var(--ease-out);
 	}
 
-	.donation-row:hover {
-		background: var(--bg-secondary);
+	.feed-row:hover {
+		background: white;
+		border-color: var(--border-active);
 	}
 
-	.donation-info {
+	.feed-info {
 		flex: 1;
 		min-width: 0;
 		display: flex;
@@ -662,7 +990,7 @@
 		gap: 1px;
 	}
 
-	.donation-name {
+	.feed-name {
 		font-weight: 600;
 		font-size: var(--text-sm);
 		color: var(--text-primary);
@@ -671,24 +999,27 @@
 		text-overflow: ellipsis;
 	}
 
-	.donation-meta {
+	.feed-meta {
 		font-size: var(--text-xs);
 		color: var(--text-muted);
+		display: flex;
+		align-items: center;
+		gap: var(--space-1);
 	}
 
-	.donation-time {
+	.feed-time {
 		color: var(--text-muted);
 	}
 
-	.donation-amount {
+	.feed-amount {
 		font-family: var(--font-display);
 		font-size: var(--text-sm);
 		font-weight: 700;
-		color: var(--orange-600);
+		color: var(--blue-600);
 		white-space: nowrap;
 	}
 
-	.donations-empty {
+	.feed-empty {
 		text-align: center;
 		padding: var(--space-12);
 		display: flex;
@@ -696,9 +1027,240 @@
 		gap: var(--space-4);
 		align-items: center;
 		color: var(--text-muted);
+		background: var(--bg-card);
+		border: 1px solid var(--border-subtle);
 	}
 
-	/* ─── Projects ────────────────── */
+	/* --- Modal styles --------------------------- */
+	.modal-lg {
+		max-width: 780px;
+	}
+
+	.modal-header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		margin-bottom: var(--space-6);
+		gap: var(--space-4);
+	}
+
+	.modal-title {
+		font-size: var(--text-xl);
+		font-weight: 800;
+		letter-spacing: -0.02em;
+	}
+
+	.modal-subtitle {
+		font-size: var(--text-sm);
+		color: var(--text-muted);
+		margin-top: var(--space-1);
+	}
+
+	.modal-close {
+		width: 2.25rem;
+		height: 2.25rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 0;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-default);
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all var(--duration-fast) var(--ease-out);
+		flex-shrink: 0;
+	}
+
+	.modal-close:hover {
+		background: var(--bg-elevated);
+		color: var(--text-primary);
+	}
+
+	.modal-stats-bar {
+		display: flex;
+		gap: var(--space-6);
+		padding: var(--space-4) var(--space-5);
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-subtle);
+		margin-bottom: var(--space-6);
+	}
+
+	.modal-stat {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.modal-stat-label {
+		font-size: var(--text-xs);
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		font-weight: 600;
+	}
+
+	.modal-stat-value {
+		font-family: var(--font-display);
+		font-size: var(--text-lg);
+		font-weight: 800;
+		color: var(--text-primary);
+	}
+
+	.modal-table-wrap {
+		max-height: 400px;
+		overflow-y: auto;
+	}
+
+	.modal-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: var(--text-sm);
+	}
+
+	.modal-table thead {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+	}
+
+	.modal-table th {
+		padding: var(--space-3) var(--space-4);
+		text-align: left;
+		font-size: var(--text-xs);
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--text-muted);
+		background: var(--bg-secondary);
+		border-bottom: 1px solid var(--border-subtle);
+		white-space: nowrap;
+	}
+
+	.modal-table td {
+		padding: var(--space-3) var(--space-4);
+		border-bottom: 1px solid var(--border-subtle);
+		vertical-align: middle;
+		color: var(--text-secondary);
+	}
+
+	.modal-table tbody tr:hover {
+		background: var(--bg-secondary);
+	}
+
+	.table-donor {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+	}
+
+	.table-area {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-1);
+		font-size: var(--text-xs);
+		color: var(--text-muted);
+	}
+
+	.table-amount {
+		font-family: var(--font-display);
+		font-weight: 700;
+		color: var(--blue-600);
+		white-space: nowrap;
+	}
+
+	.table-date {
+		font-size: var(--text-xs);
+		color: var(--text-muted);
+		white-space: nowrap;
+	}
+
+	.table-expense-concept strong {
+		display: block;
+		font-size: var(--text-sm);
+		color: var(--text-primary);
+	}
+
+	.table-vendor {
+		display: block;
+		font-size: var(--text-xs);
+		color: var(--text-muted);
+	}
+
+	.table-no-receipt {
+		color: var(--text-muted);
+		font-size: var(--text-sm);
+	}
+
+	.receipt-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-1);
+		padding: var(--space-1) var(--space-2);
+		background: rgba(20, 96, 154, 0.08);
+		border: 1px solid rgba(20, 96, 154, 0.15);
+		border-radius: var(--radius-btn);
+		color: var(--blue-600);
+		font-size: var(--text-xs);
+		font-weight: 600;
+		cursor: pointer;
+		transition: all var(--duration-fast) var(--ease-out);
+	}
+
+	.receipt-btn:hover {
+		background: rgba(20, 96, 154, 0.15);
+		border-color: rgba(20, 96, 154, 0.3);
+	}
+
+	.modal-empty {
+		text-align: center;
+		padding: var(--space-12);
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-3);
+		align-items: center;
+		color: var(--text-muted);
+	}
+
+	.modal-empty-hint {
+		font-size: var(--text-xs);
+		color: var(--text-muted);
+		opacity: 0.7;
+	}
+
+	/* Lightbox */
+	.lightbox-backdrop {
+		z-index: calc(var(--z-modal) + 1);
+	}
+
+	.lightbox-content {
+		position: relative;
+		max-width: 90vw;
+		max-height: 90vh;
+	}
+
+	.lightbox-close {
+		position: absolute;
+		top: var(--space-3);
+		right: var(--space-3);
+		z-index: 2;
+		background: rgba(0, 0, 0, 0.6);
+		color: white;
+		border: none;
+	}
+
+	.lightbox-close:hover {
+		background: rgba(0, 0, 0, 0.8);
+		color: white;
+	}
+
+	.lightbox-img {
+		max-width: 100%;
+		max-height: 85vh;
+		object-fit: contain;
+		box-shadow: var(--shadow-xl);
+	}
+
+	/* --- Projects -------------- */
 	.projects-section {
 		background: #ffffff;
 	}
@@ -796,7 +1358,7 @@
 		text-align: center;
 	}
 
-	/* ─── Areas ──────────────────────── */
+	/* --- Areas ---------------------- */
 	.areas-section {
 		background: var(--bg-secondary);
 	}
@@ -817,7 +1379,7 @@
 	.area-icon {
 		width: 3.5rem;
 		height: 3.5rem;
-		border-radius: var(--radius-lg);
+		border-radius: 0;
 		border: 1px solid;
 		display: flex;
 		align-items: center;
@@ -844,14 +1406,14 @@
 		gap: var(--space-1);
 		font-size: var(--text-sm);
 		font-weight: 600;
-		color: var(--color-accent);
+		color: var(--color-primary);
 		margin-top: auto;
 	}
 
-	/* ─── CTA Section ────────────────── */
+	/* --- CTA Section ----------------- */
 	.cta-section {
 		padding-block: var(--space-20);
-		background: linear-gradient(180deg, #ffffff 0%, var(--orange-50) 100%);
+		background: linear-gradient(180deg, #ffffff 0%, var(--blue-50) 100%);
 	}
 
 	.cta-wrapper {
@@ -870,13 +1432,11 @@
 	.cta-image-large,
 	.cta-image-small {
 		position: relative;
-		border-radius: var(--radius-2xl);
+		border-radius: 0;
 		overflow: hidden;
 	}
 
-	.cta-image-large {
-		min-height: 320px;
-	}
+	.cta-image-large { min-height: 320px; }
 
 	.cta-image-stack {
 		display: flex;
@@ -884,10 +1444,7 @@
 		gap: var(--space-4);
 	}
 
-	.cta-image-small {
-		flex: 1;
-		min-height: 150px;
-	}
+	.cta-image-small { flex: 1; min-height: 150px; }
 
 	.cta-image-large img,
 	.cta-image-small img {
@@ -900,15 +1457,11 @@
 	}
 
 	.cta-image-large:hover img,
-	.cta-image-small:hover img {
-		transform: scale(1.05);
-	}
+	.cta-image-small:hover img { transform: scale(1.05); }
 
 	.cta-image-overlay {
 		position: absolute;
-		bottom: 0;
-		left: 0;
-		right: 0;
+		bottom: 0; left: 0; right: 0;
 		padding: var(--space-3) var(--space-4);
 		background: linear-gradient(transparent, rgba(0,0,0,0.6));
 		font-family: var(--font-display);
@@ -916,6 +1469,8 @@
 		font-weight: 700;
 		color: #ffffff;
 		z-index: 1;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
 	}
 
 	.cta-eyebrow {
@@ -925,7 +1480,7 @@
 		font-weight: 700;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
-		color: var(--orange-500);
+		color: var(--blue-500);
 		margin-bottom: var(--space-3);
 	}
 
@@ -952,10 +1507,7 @@
 		margin-bottom: var(--space-8);
 	}
 
-	.cta-stat {
-		display: flex;
-		flex-direction: column;
-	}
+	.cta-stat { display: flex; flex-direction: column; }
 
 	.cta-stat-value {
 		font-family: var(--font-display);
@@ -982,17 +1534,14 @@
 		align-items: flex-start;
 	}
 
-	/* ─── Animations ───────────── */
+	/* --- Animations ------------ */
 	@keyframes pulse-live {
 		0%, 100% { opacity: 1; transform: scale(1); }
 		50% { opacity: 0.4; transform: scale(0.7); }
 	}
 
-	/* ─── Responsive ──────────── */
+	/* --- Responsive ------------ */
 	@media (max-width: 1024px) {
-		.hero-inner { grid-template-columns: 1fr; }
-		.hero-image { display: none; }
-		.metrics-wrapper { grid-template-columns: 1fr; gap: var(--space-8); }
 		.areas-grid { grid-template-columns: repeat(2, 1fr); }
 		.projects-grid { grid-template-columns: repeat(2, 1fr); }
 		.cta-wrapper { grid-template-columns: 1fr; gap: var(--space-10); }
@@ -1002,6 +1551,13 @@
 
 	@media (max-width: 768px) {
 		.hero { min-height: 80vh; padding-block: var(--space-20) var(--space-12); }
+		.finance-grid { grid-template-columns: 1fr; gap: 0; }
+		.finance-divider { padding-block: 0; }
+		.finance-divider-line { width: 80%; height: 1px; }
+		.finance-block { padding: var(--space-6) var(--space-4); }
+		.modal-content { padding: var(--space-5); }
+		.modal-stats-bar { flex-direction: column; gap: var(--space-3); }
+		.modal-table th, .modal-table td { padding: var(--space-2) var(--space-3); }
 		.cta-images { grid-template-columns: 1fr 1fr; }
 		.cta-image-large { min-height: 200px; }
 		.cta-image-small { min-height: 96px; }
@@ -1010,8 +1566,10 @@
 	@media (max-width: 640px) {
 		.areas-grid, .projects-grid { grid-template-columns: 1fr; }
 		.hero-actions { flex-direction: column; }
-		.hero-actions :global(.btn) { width: 100%; justify-content: center; }
-		.hero-trust { flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+		.hero-actions :global(.btn), .hero-actions .btn-outline-light { width: 100%; justify-content: center; }
+		.hero-trust { flex-direction: column; align-items: center; gap: var(--space-2); }
+		.livefeed-header { flex-direction: column; }
+		.feed-tabs { gap: var(--space-1); }
 		.cta-images { grid-template-columns: 1fr; }
 		.cta-image-large { min-height: 180px; }
 		.cta-stats-row { flex-direction: column; align-items: flex-start; gap: var(--space-4); }

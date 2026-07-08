@@ -4,6 +4,7 @@
 	import { page } from '$app/stores';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { formatCurrency, formatDateTime, getDonorDisplayName, getPaymentMethodLabel } from '$lib/utils/formatters';
+	import { getAreaIconName } from '$lib/utils/iconMap';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -149,7 +150,7 @@
 									{/if}
 								</td>
 								<td>
-									<p class="td-area">{donation.area?.icon} {donation.area?.name}</p>
+									<p class="td-area"><span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">{getAreaIconName(donation.area?.icon)}</span> {donation.area?.name}</p>
 									{#if donation.project}
 										<p class="td-project">{donation.project.name}</p>
 									{/if}
@@ -246,7 +247,7 @@
 					{/if}
 					<div class="detail-row">
 						<span class="detail-label">Área</span>
-						<span class="detail-val">{activeModal.area?.icon} {activeModal.area?.name}</span>
+						<span class="detail-val"><span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">{getAreaIconName(activeModal.area?.icon)}</span> {activeModal.area?.name}</span>
 					</div>
 					{#if activeModal.project}
 						<div class="detail-row">
@@ -377,7 +378,7 @@
 
 	.feedback-banner {
 		padding: var(--space-4) var(--space-5);
-		border-radius: var(--radius-lg);
+		border-radius: 0;
 		font-size: var(--text-sm);
 		font-weight: 500;
 		animation: slide-up 0.3s var(--ease-out);
@@ -404,26 +405,26 @@
 		white-space: nowrap;
 	}
 	.filter-chip:hover { border-color: var(--color-accent); color: var(--text-primary); }
-	.filter-chip.active { background: rgba(255,92,16,0.12); border-color: var(--orange-500); color: var(--orange-400); }
+	.filter-chip.active { background: rgba(20,96,154,0.12); border-color: var(--blue-500); color: var(--blue-400); }
 	.filter-select { font-size: var(--text-sm); padding: var(--space-2) var(--space-3); }
 
 	/* Table */
 	.table-card {
 		background: var(--bg-elevated);
 		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-xl);
+		border-radius: 0;
 		overflow: hidden;
 	}
 
-	.row-pending { background: rgba(255, 92, 16, 0.03); }
+	.row-pending { background: rgba(20, 96, 154, 0.03); }
 	.td-name .donor-name { font-weight: 600; color: var(--text-primary); font-size: var(--text-sm); }
 	.td-name .donor-email { font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px; }
 	.td-area { font-size: var(--text-sm); }
 	.td-project { font-size: var(--text-xs); color: var(--text-muted); }
-	.td-amount { font-family: var(--font-display); font-weight: 700; color: var(--gold-400); white-space: nowrap; }
+	.td-amount { font-family: var(--font-display); font-weight: 700; color: var(--blue-400); white-space: nowrap; }
 	.td-method { font-size: var(--text-xs); color: var(--text-secondary); }
 	.td-ref { font-size: var(--text-xs); }
-	.ref-code { font-family: monospace; background: var(--bg-base); padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
+	.ref-code { font-family: monospace; background: var(--bg-base); padding: 2px 6px; border-radius: 0; font-size: 0.7rem; }
 	.no-ref { color: var(--text-muted); }
 	.td-date { font-size: var(--text-xs); color: var(--text-muted); white-space: nowrap; }
 
@@ -437,8 +438,8 @@
 		border: 1px solid;
 		transition: all var(--duration-fast);
 	}
-	.action-btn.primary { background: rgba(255,92,16,0.15); border-color: var(--orange-500); color: var(--orange-400); }
-	.action-btn.primary:hover { background: rgba(255,92,16,0.25); }
+	.action-btn.primary { background: rgba(20,96,154,0.15); border-color: var(--blue-500); color: var(--blue-400); }
+	.action-btn.primary:hover { background: rgba(20,96,154,0.25); }
 	.action-btn.ghost { background: transparent; border-color: var(--border-subtle); color: var(--text-muted); }
 	.action-btn.ghost:hover { border-color: var(--text-muted); color: var(--text-primary); }
 
@@ -449,7 +450,7 @@
 	.page-info { font-size: var(--text-sm); color: var(--text-muted); }
 
 	/* Empty */
-	.empty-card { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-16); background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); }
+	.empty-card { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-16); background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: 0; }
 	.empty-icon { font-size: 3rem; }
 	.empty-text { font-size: var(--text-base); color: var(--text-muted); }
 
@@ -469,7 +470,7 @@
 	.modal-box {
 		background: var(--bg-surface);
 		border: 1px solid var(--border-default);
-		border-radius: var(--radius-2xl);
+		border-radius: 0;
 		width: 100%;
 		max-width: 560px;
 		max-height: 90vh;
@@ -495,8 +496,8 @@
 	.detail-row-full { flex-direction: column; gap: var(--space-2); }
 	.detail-label { font-size: var(--text-sm); color: var(--text-muted); flex-shrink: 0; }
 	.detail-val { font-size: var(--text-sm); font-weight: 500; color: var(--text-primary); text-align: right; }
-	.detail-val.amount-val { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 700; color: var(--gold-400); }
-	.detail-message { font-size: var(--text-sm); color: var(--text-secondary); font-style: italic; line-height: 1.6; padding: var(--space-3); background: var(--bg-base); border-radius: var(--radius-md); }
+	.detail-val.amount-val { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 700; color: var(--blue-400); }
+	.detail-message { font-size: var(--text-sm); color: var(--text-secondary); font-style: italic; line-height: 1.6; padding: var(--space-3); background: var(--bg-base); border-radius: 0; }
 
 	.modal-actions-section { display: flex; flex-direction: column; gap: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--border-subtle); }
 	.modal-action-btns { display: flex; gap: var(--space-3); }

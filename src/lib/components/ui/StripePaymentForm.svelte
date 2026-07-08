@@ -44,16 +44,16 @@
 				appearance: {
 					theme: 'night',
 					variables: {
-						colorPrimary: '#FF5C10',
+						colorPrimary: '#14609A',
 						colorBackground: '#181828',
 						colorText: '#f8f9fc',
 						colorDanger: '#f87171',
 						colorTextSecondary: '#a8b0c0',
-						borderRadius: '10px',
+						borderRadius: '0px',
 						fontFamily: 'Inter, system-ui, sans-serif',
 						fontSizeBase: '15px',
 						spacingUnit: '4px',
-						focusBoxShadow: '0 0 0 3px rgba(255, 92, 16, 0.25)'
+						focusBoxShadow: '0 0 0 3px rgba(20, 96, 154, 0.25)'
 					},
 					rules: {
 						'.Input': {

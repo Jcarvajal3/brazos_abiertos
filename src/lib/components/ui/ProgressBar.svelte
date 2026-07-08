@@ -3,7 +3,7 @@
 		percent: number;          // 0–100
 		label?: string;
 		showPercent?: boolean;
-		color?: 'orange' | 'gold' | 'success';
+		color?: 'primary' | 'secondary' | 'success';
 		height?: number;          // px
 		animated?: boolean;
 	}
@@ -12,16 +12,16 @@
 		percent,
 		label,
 		showPercent = true,
-		color = 'orange',
+		color = 'primary',
 		height = 8,
 		animated = true
 	}: Props = $props();
 
 	const capped = $derived(Math.min(100, Math.max(0, percent)));
 	const gradients = {
-		orange:  'linear-gradient(90deg, #FF5C10, #FBBF24)',
-		gold:    'linear-gradient(90deg, #FBBF24, #F59E0B)',
-		success: 'linear-gradient(90deg, #22c55e, #4ade80)'
+		primary:   'linear-gradient(90deg, #14609A, #518fbe)',
+		secondary: 'linear-gradient(90deg, #0c3d61, #14609A)',
+		success:   'linear-gradient(90deg, #22c55e, #4ade80)'
 	};
 </script>
 
@@ -61,12 +61,12 @@
 		font-family: var(--font-display);
 		font-size: var(--text-sm);
 		font-weight: 700;
-		color: var(--gold-400);
+		color: var(--blue-500);
 	}
 
 	.progress-fill {
 		height: 100%;
-		border-radius: var(--radius-full);
+		border-radius: 0;
 		position: relative;
 		overflow: hidden;
 		transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);

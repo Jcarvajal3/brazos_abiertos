@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import logo from '$lib/assets/logo.png';
+	import logo from '$lib/assets/logo_azul.jpeg';
 
 	let scrolled = $state(false);
 	let mobileMenuOpen = $state(false);
@@ -14,16 +14,15 @@
 	const navLinks = [
 		{ href: '/',           label: 'Inicio' },
 		{ href: '/proyectos',  label: 'Proyectos' },
-		{ href: '/proyectos/registrar', label: 'Registrar ONG' },
 	];
 </script>
 
 <header class="site-header" class:scrolled>
 	<div class="container">
-		<nav class="nav" aria-label="Navegación principal">
+		<nav class="nav" aria-label="Navegacion principal">
 			<!-- Logo -->
-			<a href="/" class="logo" aria-label="Brazos Abiertos con Venezuela — Inicio">
-				<img src={logo} alt="Brazos Abiertos con Venezuela" class="logo-img" />
+			<a href="/" class="logo" aria-label="Brazos Abiertos Fundacion — Inicio">
+				<img src={logo} alt="Brazos Abiertos Fundacion" class="logo-img" />
 			</a>
 
 			<!-- Desktop Navigation -->
@@ -44,18 +43,15 @@
 
 			<!-- CTA -->
 			<div class="nav-actions">
-				<a href="/donar" class="btn btn-primary btn-sm nav-cta" id="header-donate-btn">
-					<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-						<path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"/>
-					</svg>
-					Donar ahora
+				<a href="/donar" class="btn btn-primary nav-cta" id="header-donate-btn">
+					Donar
 				</a>
 
 				<!-- Mobile Menu Toggle -->
 				<button
 					class="mobile-toggle"
 					onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
-					aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+					aria-label={mobileMenuOpen ? 'Cerrar menu' : 'Abrir menu'}
 					aria-expanded={mobileMenuOpen}
 				>
 					<span class="bar" class:open={mobileMenuOpen}></span>
@@ -85,7 +81,7 @@
 					{/each}
 				</ul>
 				<a href="/donar" class="btn btn-primary" style="width:100%; justify-content:center;" onclick={() => (mobileMenuOpen = false)}>
-					❤️ Donar ahora
+					Donar
 				</a>
 			</div>
 		</div>
@@ -106,7 +102,7 @@
 	}
 
 	.site-header.scrolled {
-		background: rgba(255, 255, 255, 0.95);
+		background: rgba(255, 255, 255, 0.97);
 		backdrop-filter: blur(16px);
 		-webkit-backdrop-filter: blur(16px);
 		border-color: rgba(0, 0, 0, 0.08);
@@ -130,15 +126,14 @@
 	}
 
 	.logo-img {
-		height: 64px;
+		height: 56px;
 		width: auto;
 		object-fit: contain;
-		mix-blend-mode: multiply;
-		transition: transform var(--duration-fast) var(--ease-out);
+		transition: opacity var(--duration-fast) var(--ease-out);
 	}
 
 	.logo-img:hover {
-		transform: scale(1.02);
+		opacity: 0.85;
 	}
 
 	/* Nav Links */
@@ -154,24 +149,26 @@
 	.nav-link {
 		display: block;
 		padding: var(--space-2) var(--space-3);
-		border-radius: var(--radius-md);
+		border-radius: 0;
 		font-size: var(--text-sm);
 		font-weight: 500;
-		color: #4a5568;
+		color: var(--text-secondary);
 		text-decoration: none;
 		transition:
 			color var(--duration-fast) var(--ease-out),
-			background var(--duration-fast) var(--ease-out);
+			border-color var(--duration-fast) var(--ease-out);
+		border-bottom: 2px solid transparent;
 	}
 
 	.nav-link:hover {
-		color: #1a1a2e;
-		background: rgba(0, 0, 0, 0.04);
+		color: var(--text-primary);
+		border-bottom-color: var(--blue-300);
 	}
 
 	.nav-link.active {
-		color: var(--orange-500);
-		background: rgba(255, 92, 16, 0.08);
+		color: var(--blue-500);
+		border-bottom-color: var(--blue-500);
+		font-weight: 600;
 	}
 
 	/* Actions */
@@ -195,7 +192,7 @@
 		width: 2.25rem;
 		height: 2.25rem;
 		padding: 0.4rem;
-		border-radius: var(--radius-md);
+		border-radius: 0;
 		background: rgba(0, 0, 0, 0.04);
 		cursor: pointer;
 		border: 1px solid rgba(0, 0, 0, 0.1);
@@ -204,13 +201,13 @@
 	.bar {
 		width: 100%;
 		height: 2px;
-		background: #4a5568;
+		background: var(--text-secondary);
 		border-radius: 2px;
 		transition: all var(--duration-normal) var(--ease-out);
 		transform-origin: center;
 	}
 
-	.mobile-toggle:hover .bar { background: #1a1a2e; }
+	.mobile-toggle:hover .bar { background: var(--text-primary); }
 
 	/* Mobile Menu */
 	.mobile-menu {
@@ -233,16 +230,17 @@
 	.mobile-nav-link {
 		display: block;
 		padding: var(--space-3) var(--space-4);
-		border-radius: var(--radius-md);
+		border-radius: 0;
 		font-size: var(--text-base);
 		font-weight: 500;
-		color: #4a5568;
+		color: var(--text-secondary);
 		text-decoration: none;
 		transition: all var(--duration-fast) var(--ease-out);
+		border-left: 3px solid transparent;
 	}
 
-	.mobile-nav-link:hover { color: #1a1a2e; background: rgba(0, 0, 0, 0.04); }
-	.mobile-nav-link.active { color: var(--orange-500); background: rgba(255, 92, 16, 0.08); }
+	.mobile-nav-link:hover { color: var(--text-primary); background: rgba(0, 0, 0, 0.02); }
+	.mobile-nav-link.active { color: var(--blue-500); border-left-color: var(--blue-500); background: rgba(20, 96, 154, 0.04); }
 
 	/* Responsive */
 	@media (max-width: 768px) {
@@ -252,6 +250,6 @@
 	}
 
 	@media (max-width: 480px) {
-		.logo-img { height: 48px; }
+		.logo-img { height: 42px; }
 	}
 </style>

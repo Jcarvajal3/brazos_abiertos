@@ -333,7 +333,7 @@
 	.process-num {
 		width: 2rem; height: 2rem;
 		border-radius: 50%;
-		background: linear-gradient(135deg, var(--orange-500), var(--gold-400));
+		background: linear-gradient(135deg, var(--blue-500), var(--blue-400));
 		color: white;
 		font-family: var(--font-display);
 		font-size: var(--text-sm);

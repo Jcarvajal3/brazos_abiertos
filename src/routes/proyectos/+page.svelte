@@ -4,6 +4,7 @@
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { formatCurrency } from '$lib/utils/formatters';
+	import { getAreaIconName } from '$lib/utils/iconMap';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -32,11 +33,7 @@
 				<p>Todos los proyectos han sido revisados y aprobados por nuestro equipo. Tu donación va directamente a la organización elegida.</p>
 			</div>
 
-			<div class="page-header-actions">
-				<Button href="/proyectos/registrar" variant="outline">
-					+ Registrar mi ONG
-				</Button>
-			</div>
+
 		</div>
 
 		<!-- Area filter bar -->
@@ -58,7 +55,7 @@
 						id="filter-{area.slug}"
 						style="--chip-color: {area.color}"
 					>
-						{area.icon} {area.name}
+						<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">{getAreaIconName(area.icon)}</span> {area.name}
 					</button>
 				{/each}
 			</div>
@@ -69,8 +66,7 @@
 			<div class="empty-state">
 				<p class="empty-icon">🔍</p>
 				<h2>No hay proyectos en esta área</h2>
-				<p>Sé el primero en registrar un proyecto para {activeSlug ? data.areas.find(a => a.slug === activeSlug)?.name ?? 'esta área' : 'esta plataforma'}.</p>
-				<Button href="/proyectos/registrar" variant="primary">Registrar proyecto</Button>
+				<p>Pronto habrá proyectos disponibles para {activeSlug ? data.areas.find(a => a.slug === activeSlug)?.name ?? 'esta área' : 'esta plataforma'}.</p>
 			</div>
 		{:else}
 			<p class="results-count">
@@ -86,8 +82,8 @@
 						{#if project.cover_image_url}
 							<img src={project.cover_image_url} alt={project.name} class="project-img" loading="lazy" />
 						{:else}
-							<div class="project-img-placeholder" style="background:{project.area?.color ?? '#F97316'}18;">
-								<span style="font-size:3.5rem;" role="img" aria-label={project.area?.name}>{project.area?.icon ?? '🎯'}</span>
+							<div class="project-img-placeholder" style="background:{project.area?.color ?? '#14609A'}18;">
+								<span class="material-symbols-outlined" style="font-size:3.5rem;" role="img" aria-label={project.area?.name}>{getAreaIconName(project.area?.icon)}</span>
 							</div>
 						{/if}
 
@@ -95,7 +91,7 @@
 							<!-- Area badge -->
 							<div class="project-badges">
 								<Badge variant="muted">
-									{project.area?.icon} {project.area?.name}
+									<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">{getAreaIconName(project.area?.icon)}</span> {project.area?.name}
 								</Badge>
 							</div>
 
@@ -139,16 +135,7 @@
 			</div>
 		{/if}
 
-		<!-- Bottom CTA -->
-		<div class="bottom-cta glass">
-			<div class="bottom-cta-content">
-				<h2>¿Tienes una ONG o proyecto benéfico?</h2>
-				<p>Regístrate en nuestra plataforma para recibir donaciones directamente. El proceso es gratuito y rápido.</p>
-			</div>
-			<Button href="/proyectos/registrar" variant="primary" size="lg">
-				Registrar mi organización →
-			</Button>
-		</div>
+
 	</div>
 </div>
 
