@@ -231,7 +231,7 @@
 				role="tab"
 				aria-selected={activeTab === 'all'}
 			>Todas</button>
-			{#each data.areas as area}
+			{#each data.areas.filter(a => a.slug !== 'cualquiera') as area}
 				<button
 					class="feed-tab"
 					class:active={activeTab === area.slug}
@@ -288,7 +288,7 @@
 		</div>
 
 		<div class="areas-grid">
-			{#each data.areas as area, i}
+			{#each data.areas.filter(a => a.slug !== 'cualquiera') as area, i}
 				<a
 					href="/donar?area={area.slug}"
 					class="area-card card card-interactive animate-fade-in-up"
