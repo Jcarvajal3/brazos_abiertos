@@ -392,7 +392,7 @@
 	.filter-label { font-size: var(--text-sm); color: var(--text-muted); font-weight: 600; white-space: nowrap; }
 	.filter-chips { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 	.filter-chip {
-		padding: var(--space-1-5) var(--space-3);
+		padding: 0.375rem var(--space-3);
 		border-radius: 8px;
 		font-size: var(--text-xs);
 		font-weight: 600;
@@ -430,7 +430,7 @@
 	.td-date { font-size: var(--text-xs); color: var(--text-muted); white-space: nowrap; }
 
 	.action-btn {
-		padding: var(--space-1-5) var(--space-3);
+		padding: 0.375rem var(--space-3);
 		border-radius: var(--radius-md);
 		font-size: var(--text-xs);
 		font-weight: 700;

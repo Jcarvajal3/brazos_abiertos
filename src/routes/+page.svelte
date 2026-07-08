@@ -982,7 +982,7 @@
 	.feed-tab {
 		display: inline-flex;
 		align-items: center;
-		gap: var(--space-1-5);
+		gap: 0.375rem;
 		padding: var(--space-2) var(--space-4);
 		border-radius: var(--radius-btn);
 		font-family: var(--font-display);
@@ -1057,7 +1057,7 @@
 		color: var(--text-primary);
 		display: flex;
 		align-items: center;
-		gap: var(--space-1.5);
+		gap: 0.375rem;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
