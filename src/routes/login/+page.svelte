@@ -108,6 +108,7 @@
 		padding: var(--space-6);
 		position: relative;
 		overflow: hidden;
+		background: var(--bg-secondary);
 	}
 
 	.orb {
@@ -116,8 +117,8 @@
 		filter: blur(80px);
 		pointer-events: none;
 	}
-	.orb-1 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(255,92,16,0.15) 0%, transparent 70%); top: -150px; left: -150px; }
-	.orb-2 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(251,191,36,0.1) 0%, transparent 70%); bottom: -100px; right: -100px; }
+	.orb-1 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(20,96,154,0.12) 0%, transparent 70%); top: -150px; left: -150px; }
+	.orb-2 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(27,58,92,0.08) 0%, transparent 70%); bottom: -100px; right: -100px; }
 
 	.login-card {
 		width: 100%;
@@ -130,6 +131,7 @@
 		position: relative;
 		z-index: 1;
 		animation: scale-in 0.4s var(--ease-out) both;
+		border-radius: 16px;
 	}
 
 	.login-logo {
@@ -151,6 +153,7 @@
 		font-weight: 800;
 		letter-spacing: -0.03em;
 		text-align: center;
+		color: var(--text-primary);
 	}
 
 	.login-subtitle {
@@ -163,10 +166,10 @@
 	.login-error {
 		width: 100%;
 		padding: var(--space-3) var(--space-4);
-		background: rgba(239, 68, 68, 0.1);
-		border: 1px solid rgba(239, 68, 68, 0.3);
-		border-radius: var(--radius-md);
-		color: #f87171;
+		background: rgba(220, 38, 38, 0.06);
+		border: 1px solid rgba(220, 38, 38, 0.2);
+		border-radius: 8px;
+		color: #dc2626;
 		font-size: var(--text-sm);
 		line-height: 1.5;
 	}
@@ -192,6 +195,7 @@
 		font-size: 1rem;
 		line-height: 1;
 		padding: var(--space-1);
+		color: var(--text-muted);
 	}
 	.password-wrap .form-input { padding-right: 2.5rem; }
 

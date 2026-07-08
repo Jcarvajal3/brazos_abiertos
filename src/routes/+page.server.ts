@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
 import type { Area, Project } from '$lib/types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, fetch }) => {
 	// Fetch aggregated donation stats (view)
 	const { data: statsData } = await locals.supabase
 		.from('donation_stats')
@@ -46,6 +46,20 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.order('approved_at', { ascending: false })
 		.limit(3);
 
+	// Fetch official BCV rate from our endpoint
+	let bcvRate = 40.0;
+	try {
+		const bcvRes = await fetch('/api/bcv');
+		if (bcvRes.ok) {
+			const bcvData = await bcvRes.json();
+			if (bcvData && typeof bcvData.rate === 'number') {
+				bcvRate = bcvData.rate;
+			}
+		}
+	} catch (e) {
+		console.error('Error fetching BCV rate in page load:', e);
+	}
+
 	return {
 		stats: statsData ?? {
 			total_raised_usd: 0,
@@ -63,6 +77,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		recentDonations: (recentDonations ?? []) as any[],
 		recentExpenses: (recentExpenses ?? []) as any[],
 		areas: (areasRaw ?? []) as Area[],
-		featuredProjects: (featuredProjectsRaw ?? []) as any[]
+		featuredProjects: (featuredProjectsRaw ?? []) as any[],
+		bcvRate
 	};
 };

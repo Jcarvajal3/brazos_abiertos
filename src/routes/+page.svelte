@@ -23,7 +23,8 @@
 	let expenseImageModal = $state<string | null>(null); // URL for receipt image lightbox
 
 	const supabase = createSupabaseClient();
-	let channel: ReturnType<typeof supabase.channel> | null = null;
+	let donationChannel: ReturnType<typeof supabase.channel> | null = null;
+	let expenseChannel: ReturnType<typeof supabase.channel> | null = null;
 
 	function getInitials(name: string) {
 		return name
@@ -43,7 +44,7 @@
 
 	onMount(() => {
 		// Subscribe to new confirmed donations in real time
-		channel = supabase
+		donationChannel = supabase
 			.channel('live-donations')
 			.on(
 				'postgres_changes',
@@ -72,10 +73,41 @@
 				}
 			)
 			.subscribe();
+
+		// Subscribe to new expenses in real time (transparency counters)
+		expenseChannel = supabase
+			.channel('live-expenses')
+			.on(
+				'postgres_changes',
+				{
+					event: 'INSERT',
+					schema: 'public',
+					table: 'expenses'
+				},
+				(payload) => {
+					const exp = payload.new as any;
+					const amt = Number(exp.amount) || 0;
+					if (exp.currency === 'USD') {
+						expenseStats = {
+							...expenseStats,
+							total_expenses_usd: expenseStats.total_expenses_usd + amt,
+							total_expense_records: expenseStats.total_expense_records + 1
+						};
+					} else {
+						expenseStats = {
+							...expenseStats,
+							total_expenses_ves: expenseStats.total_expenses_ves + amt,
+							total_expense_records: expenseStats.total_expense_records + 1
+						};
+					}
+				}
+			)
+			.subscribe();
 	});
 
 	onDestroy(() => {
-		if (channel) supabase.removeChannel(channel);
+		if (donationChannel) supabase.removeChannel(donationChannel);
+		if (expenseChannel) supabase.removeChannel(expenseChannel);
 	});
 
 	function formatDate(dateStr: string) {
@@ -215,7 +247,14 @@
 		<div class="livefeed-header">
 			<div>
 				<h2 class="livefeed-title">Donaciones en vivo</h2>
-				<p class="livefeed-subtitle">Mira en tiempo real como llegan las donaciones.</p>
+				<p class="livefeed-subtitle">
+					Mira en tiempo real como llegan las donaciones.
+					{#if data.bcvRate}
+						<span class="bcv-rate-text" title="Tasa oficial obtenida en tiempo real del Banco Central de Venezuela">
+							Tasa BCV: <strong>Bs. {data.bcvRate.toFixed(2)}</strong>
+						</span>
+					{/if}
+				</p>
 			</div>
 			<span class="live-badge">
 				<span class="live-dot"></span> EN VIVO
@@ -259,17 +298,28 @@
 						<div class="avatar avatar-orange" style="width:2.25rem;height:2.25rem;font-size:0.7rem;">
 							{d.is_anonymous ? '?' : getInitials(getDonorDisplayName(d.is_anonymous, d.donor_name))}
 						</div>
-						<div class="feed-info">
-							<span class="feed-name">{getDonorDisplayName(d.is_anonymous, d.donor_name)}</span>
-							<span class="feed-meta">
-								<span class="material-symbols-outlined" style="font-size:0.75rem;vertical-align:middle;">{getAreaIconName(d.area?.icon)}</span>
-								{d.area?.name}
-								{#if d.confirmed_at}
-									<span class="feed-time">· {formatRelativeTime(d.confirmed_at)}</span>
-								{/if}
-							</span>
-						</div>
-						<span class="feed-amount">{formatCurrency(d.amount, d.currency)}</span>
+						<span class="feed-name">{getDonorDisplayName(d.is_anonymous, d.donor_name)}</span>
+						<span class="feed-area">
+							<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">{getAreaIconName(d.area?.icon)}</span>
+							{d.area?.name}
+						</span>
+						<span class="feed-time">
+							{#if d.confirmed_at}
+								{formatRelativeTime(d.confirmed_at)}
+							{:else}
+								—
+							{/if}
+						</span>
+						<span class="feed-amount">
+							{#if d.currency === 'VES'}
+								{formatCurrency(d.amount, 'VES')}
+								<span class="feed-conversion" title="Conversión aproximada a tasa oficial BCV de Bs. {data.bcvRate.toFixed(2)}">
+									(~{formatCurrency(d.amount / data.bcvRate, 'USD')})
+								</span>
+							{:else}
+								{formatCurrency(d.amount, 'USD')}
+							{/if}
+						</span>
 					</div>
 				{/each}
 			</div>
@@ -488,7 +538,16 @@
 											{d.area?.name}
 										</span>
 									</td>
-									<td class="table-amount">{formatCurrency(d.amount, d.currency)}</td>
+									<td class="table-amount">
+										{#if d.currency === 'VES'}
+											{formatCurrency(d.amount, 'VES')}
+											<span class="table-conversion" title="Conversión aproximada a tasa oficial BCV de Bs. {data.bcvRate.toFixed(2)}">
+												(~{formatCurrency(d.amount / data.bcvRate, 'USD')})
+											</span>
+										{:else}
+											{formatCurrency(d.amount, 'USD')}
+										{/if}
+									</td>
 									<td class="table-date">{d.confirmed_at ? formatDate(d.confirmed_at) : '—'}</td>
 								</tr>
 							{/each}
@@ -966,13 +1025,14 @@
 	}
 
 	.feed-row {
-		display: flex;
+		display: grid;
+		grid-template-columns: 2.25rem 2fr 2fr 1.5fr auto;
 		align-items: center;
-		gap: var(--space-3);
+		gap: var(--space-4);
 		padding: var(--space-3) var(--space-4);
 		background: var(--bg-card);
 		border: 1px solid var(--border-subtle);
-		border-radius: 0;
+		border-radius: 8px;
 		transition: border-color var(--duration-fast) var(--ease-out),
 		            background var(--duration-fast) var(--ease-out);
 	}
@@ -980,14 +1040,6 @@
 	.feed-row:hover {
 		background: white;
 		border-color: var(--border-active);
-	}
-
-	.feed-info {
-		flex: 1;
-		min-width: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 1px;
 	}
 
 	.feed-name {
@@ -999,16 +1051,25 @@
 		text-overflow: ellipsis;
 	}
 
-	.feed-meta {
-		font-size: var(--text-xs);
-		color: var(--text-muted);
+	.feed-area {
+		font-weight: 600;
+		font-size: var(--text-sm);
+		color: var(--text-primary);
 		display: flex;
 		align-items: center;
-		gap: var(--space-1);
+		gap: var(--space-1.5);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.feed-time {
-		color: var(--text-muted);
+		font-weight: 600;
+		font-size: var(--text-sm);
+		color: var(--text-primary);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.feed-amount {
@@ -1017,6 +1078,39 @@
 		font-weight: 700;
 		color: var(--blue-600);
 		white-space: nowrap;
+		text-align: right;
+	}
+
+	.bcv-rate-text {
+		color: var(--text-muted);
+		font-size: var(--text-xs);
+		margin-left: var(--space-2);
+		background: var(--bg-secondary);
+		padding: 2px 8px;
+		border-radius: 4px;
+		border: 1px solid var(--border-subtle);
+		display: inline-block;
+		vertical-align: middle;
+	}
+
+	.feed-conversion, .table-conversion {
+		display: block;
+		font-size: var(--text-xs);
+		color: var(--text-muted);
+		font-weight: 500;
+		margin-top: 2px;
+		text-align: right;
+	}
+
+	@media (max-width: 640px) {
+		.feed-row {
+			grid-template-columns: 2.25rem 1.5fr 1fr auto;
+			gap: var(--space-2);
+			padding: var(--space-2) var(--space-3);
+		}
+		.feed-time {
+			display: none;
+		}
 	}
 
 	.feed-empty {

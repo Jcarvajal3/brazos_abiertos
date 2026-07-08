@@ -157,12 +157,20 @@
 			}
 
 			if (paymentMethod === 'stripe') {
+				if (!result.clientSecret || !result.donationId) {
+					toast.error('Error al procesar', 'No se pudo crear el intento de pago. Inténtalo de nuevo.');
+					return;
+				}
 				// ── Phase 2: mount Stripe Elements with the clientSecret ──
 				stripeClientSecret = result.clientSecret;
 				stripeDonationId = result.donationId;
 				stripeReady = true;
 				// The button now becomes "Pagar con tarjeta" which calls confirmStripe()
 			} else {
+				if (!result.donationId) {
+					toast.error('Error al procesar', 'No se pudo registrar la donación. Inténtalo de nuevo.');
+					return;
+				}
 				// Manual payment → go directly to confirmation
 				await goto(`/donar/confirmacion?id=${result.donationId}`);
 			}
@@ -185,6 +193,10 @@
 	}
 
 	function handleStripeSuccess(paymentIntentId: string) {
+		if (!stripeDonationId) {
+			toast.error('Error', 'No se encontró el ID de la donación.');
+			return;
+		}
 		goto(`/donar/confirmacion?donation_id=${stripeDonationId}&pi=${paymentIntentId}`);
 	}
 

@@ -1,12 +1,16 @@
 import type { PageServerLoad } from './$types';
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
+
+// Simple UUID v4 check
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	// Support both ?id= (manual) and ?donation_id= (Stripe redirect)
 	const donationId = url.searchParams.get('id') ?? url.searchParams.get('donation_id');
 
-	if (!donationId) {
-		throw error(404, 'No se encontró la donación');
+	if (!donationId || !UUID_RE.test(donationId)) {
+		// Redirect to /donar instead of a confusing 404
+		throw redirect(303, '/donar');
 	}
 
 	const { data, error: dbError } = await locals.supabase

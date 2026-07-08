@@ -93,13 +93,19 @@ export const POST: RequestHandler = async ({ request }) => {
 				.select('id')
 				.single();
 
-			if (dbError) {
+			if (dbError || !insertedStripe) {
 				console.error('DB insert error (stripe):', dbError);
 				await stripe.paymentIntents.cancel(paymentIntent.id);
 				throw error(500, 'Error al registrar la donación');
 			}
 
-			const stripeRecord = (insertedStripe as any) ?? {};
+			const stripeRecord = insertedStripe as any;
+
+			if (!stripeRecord.id) {
+				console.error('DB insert returned no ID (stripe)');
+				await stripe.paymentIntents.cancel(paymentIntent.id);
+				throw error(500, 'Error al registrar la donación: no se obtuvo ID');
+			}
 
 			return json({
 				success: true,
@@ -138,12 +144,17 @@ export const POST: RequestHandler = async ({ request }) => {
 		.select('id')
 		.single();
 
-	if (dbError) {
+	if (dbError || !insertedManual) {
 		console.error('DB insert error (manual):', dbError);
 		throw error(500, 'Error al registrar la donación');
 	}
 
-	const manualRecord = (insertedManual as any) ?? {};
+	const manualRecord = insertedManual as any;
+
+	if (!manualRecord.id) {
+		console.error('DB insert returned no ID (manual)');
+		throw error(500, 'Error al registrar la donación: no se obtuvo ID');
+	}
 
 	return json({
 		success: true,
