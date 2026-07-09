@@ -241,7 +241,7 @@
 	}
 </script>
 
-{#snippet areaPieChart(distribution, title)}
+{#snippet areaPieChart(distribution: any, title: string)}
 	{#if distribution.total > 0}
 		<div class="area-chart-card glass">
 			<h3 class="chart-card-title">{title}</h3>

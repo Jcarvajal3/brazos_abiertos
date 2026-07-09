@@ -24,8 +24,7 @@ export const donationSchema = z
 			.transform((v) => v?.trim() || null),
 		amount: z
 			.number({ error: 'El monto debe ser un número válido' })
-			.positive('El monto debe ser mayor a cero')
-			.max(100000, 'El monto máximo por donación es 100,000'),
+			.positive('El monto debe ser mayor a cero'),
 		currency: z.enum(['USD', 'VES', 'EUR', 'USDT']),
 		donor_currency: z.enum(['USD', 'VES', 'EUR', 'USDT']).optional(),
 		payment_method: z.enum(['stripe', 'pago_movil', 'transferencia', 'zelle', 'bizum', 'crypto']),

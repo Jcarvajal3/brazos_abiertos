@@ -175,10 +175,6 @@
 			errors.amount = 'El monto debe ser mayor a cero';
 			return;
 		}
-		if (finalAmount > 100000) {
-			errors.amount = 'El monto máximo es 100,000';
-			return;
-		}
 		// Set default payment method for selected currency
 		paymentMethod = PAYMENT_METHODS_BY_CURRENCY[selectedCurrency][0];
 		goToStep(4);
@@ -535,7 +531,6 @@
 										class="form-input"
 										class:error={errors.amount}
 										min="1"
-										max="100000"
 										step="0.01"
 										placeholder="0.00"
 										bind:value={customAmount}

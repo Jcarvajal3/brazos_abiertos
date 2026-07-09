@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import Button from '$lib/components/ui/Button.svelte';
-	import logo from '$lib/assets/logo.png';
+	import logo from '$lib/assets/logo_azul.jpeg';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();

@@ -6,9 +6,44 @@
 	let mobileMenuOpen = $state(false);
 
 	$effect(() => {
-		function handleScroll() { scrolled = window.scrollY > 20; }
+		const path = $page.url.pathname;
+		
+		function handleScroll() {
+			if (path.startsWith('/admin')) {
+				const adminContent = document.querySelector('.admin-content');
+				if (adminContent) {
+					scrolled = adminContent.scrollTop > 20;
+					return;
+				}
+			}
+			scrolled = window.scrollY > 20;
+		}
+
 		window.addEventListener('scroll', handleScroll, { passive: true });
-		return () => window.removeEventListener('scroll', handleScroll);
+		
+		let adminContentEl: Element | null = null;
+		
+		if (path.startsWith('/admin')) {
+			const timeoutId = setTimeout(() => {
+				adminContentEl = document.querySelector('.admin-content');
+				if (adminContentEl) {
+					adminContentEl.addEventListener('scroll', handleScroll, { passive: true });
+					handleScroll();
+				}
+			}, 100);
+			
+			return () => {
+				clearTimeout(timeoutId);
+				window.removeEventListener('scroll', handleScroll);
+				if (adminContentEl) {
+					adminContentEl.removeEventListener('scroll', handleScroll);
+				}
+			};
+		}
+
+		return () => {
+			window.removeEventListener('scroll', handleScroll);
+		};
 	});
 
 	const navLinks = [

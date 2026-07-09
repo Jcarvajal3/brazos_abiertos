@@ -4,7 +4,6 @@
 	import { onMount, onDestroy } from 'svelte';
 	import Toaster from '$lib/components/ui/Toaster.svelte';
 	import { createSupabaseClient } from '$lib/supabase';
-	import logo from '$lib/assets/logo.png';
 	import type { LayoutData } from './$types';
 	import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -62,9 +61,7 @@
 	<aside class="sidebar" class:open={sidebarOpen} aria-label="Navegación del panel de administración">
 		<div class="sidebar-header">
 			<a href="/admin" class="sidebar-logo">
-				<div class="sidebar-logo-container">
-					<img src={logo} alt="Brazos Abiertos" class="sidebar-logo-img" />
-				</div>
+				<span class="sidebar-logo-text">Brazos Abiertos</span>
 				<span class="sidebar-admin-badge">Admin</span>
 			</a>
 		</div>
@@ -188,20 +185,12 @@
 		text-decoration: none;
 	}
 
-	.sidebar-logo-container {
-		background: var(--bg-secondary);
-		padding: var(--space-2) var(--space-3);
-		border-radius: 8px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 100%;
-	}
-
-	.sidebar-logo-img {
-		height: 28px;
-		width: auto;
-		object-fit: contain;
+	.sidebar-logo-text {
+		font-family: var(--font-display);
+		font-size: var(--text-lg);
+		font-weight: 800;
+		color: var(--text-primary);
+		letter-spacing: -0.02em;
 	}
 
 	.sidebar-admin-badge {
