@@ -5,7 +5,16 @@
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
 	import StripePaymentForm from '$lib/components/ui/StripePaymentForm.svelte';
 	import { toast } from '$lib/stores/toast';
-	import { SUGGESTED_AMOUNTS_USD, SUGGESTED_AMOUNTS_VES, BANK_DETAILS } from '$lib/utils/constants';
+	import {
+		SUGGESTED_AMOUNTS_USD,
+		SUGGESTED_AMOUNTS_EUR,
+		SUGGESTED_AMOUNTS_USDT,
+		BANK_DETAILS,
+		CURRENCY_OPTIONS,
+		PAYMENT_METHODS_BY_CURRENCY,
+		COUNTRIES,
+		type DonorCurrencyOption
+	} from '$lib/utils/constants';
 	import { formatCurrency } from '$lib/utils/formatters';
 	import { getAreaIconName } from '$lib/utils/iconMap';
 	import type { PageData } from './$types';
@@ -28,12 +37,18 @@
 	let customAmount = $state('');
 	let isCustom = $state(false);
 	let donorName = $state('');
-	let donorEmail = $state('');
 	let isAnonymous = $state(false);
 	let message = $state('');
+	let selectedCurrency = $state<DonorCurrencyOption>('USD');
+
+	// Country selector state
+	let selectedCountry = $state<string>('');
+	let countrySearchQuery = $state('');
+	let countryDropdownOpen = $state(false);
+	let countryInputRef = $state<HTMLInputElement | null>(null);
 
 	// Step 4 state
-	let paymentMethod = $state<'stripe' | 'pago_movil' | 'transferencia'>('stripe');
+	let paymentMethod = $state<string>('stripe');
 	let manualReference = $state('');
 	let manualBank = $state('');
 
@@ -41,20 +56,60 @@
 	let stripeFormRef = $state<{ confirmPayment: () => Promise<void> } | null>(null);
 	let stripeClientSecret = $state('');
 	let stripeDonationId = $state('');
-	let stripeReady = $state(false); // true once clientSecret received
+	let stripeReady = $state(false);
 
 	let submitting = $state(false);
-	let errors = $state<Record<string, string>>({})
+	let errors = $state<Record<string, string>>({});
 
 	const supabase = createSupabaseClient();
 
 	// ─── Derived values ───────────────────────────────────────────
 	const finalAmount = $derived(isCustom ? Number(customAmount) || 0 : amount);
-	const currency = 'USD' as const;
+
+	// Map donor currency to DB currency stored (VES donations store amount in USD)
+	const storedCurrency = $derived(selectedCurrency === 'VES' ? 'USD' : selectedCurrency);
+
+	// Suggested amounts for the selected currency
 	const suggestedAmounts = $derived(
-		paymentMethod === 'stripe' ? SUGGESTED_AMOUNTS_USD : SUGGESTED_AMOUNTS_VES
+		selectedCurrency === 'EUR'  ? SUGGESTED_AMOUNTS_EUR  :
+		selectedCurrency === 'USDT' ? SUGGESTED_AMOUNTS_USDT :
+		SUGGESTED_AMOUNTS_USD // USD and VES both show USD amounts
 	);
+
+	// Available payment methods for selected currency
+	const availablePaymentMethods = $derived(PAYMENT_METHODS_BY_CURRENCY[selectedCurrency]);
+
+	// Currency symbol / prefix for display
+	const currencySymbol = $derived(
+		selectedCurrency === 'EUR'  ? '€' :
+		selectedCurrency === 'USDT' ? '₮' : '$'
+	);
+
+	// Currency label for amount buttons
+	const currencyLabel = $derived(
+		selectedCurrency === 'EUR'  ? 'EUR' :
+		selectedCurrency === 'USDT' ? 'USDt' :
+		selectedCurrency === 'VES'  ? 'USD' : 'USD'
+	);
+
 	const stepPercent = $derived(((step - 1) / 3) * 100);
+
+	// Filtered countries based on search
+	const filteredCountries = $derived(
+		countrySearchQuery.trim().length === 0
+			? COUNTRIES
+			: COUNTRIES.filter(c =>
+				c.name.toLowerCase().includes(countrySearchQuery.toLowerCase()) ||
+				c.code.toLowerCase().includes(countrySearchQuery.toLowerCase())
+			)
+	);
+
+	// VES equivalent for display in step 4 (bolívares mode)
+	const vesEquivalent = $derived(
+		selectedCurrency === 'VES' && data.bcvRate
+			? finalAmount * data.bcvRate
+			: null
+	);
 
 	// ─── Step navigation ─────────────────────────────────────────
 	function goToStep(n: number) {
@@ -102,6 +157,17 @@
 		goToStep(3);
 	}
 
+	// ─── Currency selection (Step 3) ──────────────────────────────
+	function selectCurrency(c: DonorCurrencyOption) {
+		selectedCurrency = c;
+		// Reset amount to default for new currency
+		amount = suggestedAmounts[2] ?? 25;
+		isCustom = false;
+		customAmount = '';
+		// Default to first available payment method
+		paymentMethod = PAYMENT_METHODS_BY_CURRENCY[c][0];
+	}
+
 	// ─── Step 3 → 4 ──────────────────────────────────────────────
 	function goToPayment() {
 		errors = {};
@@ -113,6 +179,8 @@
 			errors.amount = 'El monto máximo es 100,000';
 			return;
 		}
+		// Set default payment method for selected currency
+		paymentMethod = PAYMENT_METHODS_BY_CURRENCY[selectedCurrency][0];
 		goToStep(4);
 	}
 
@@ -121,7 +189,8 @@
 		errors = {};
 		if (!selectedArea) return;
 
-		if (paymentMethod !== 'stripe' && !manualReference.trim()) {
+		const isManual = paymentMethod !== 'stripe';
+		if (isManual && !manualReference.trim()) {
 			errors.manualReference = 'Debes ingresar el número de referencia de la transacción';
 			return;
 		}
@@ -133,14 +202,15 @@
 				area_id: selectedArea.id,
 				project_id: selectedProject?.id ?? null,
 				donor_name: isAnonymous ? undefined : (donorName.trim() || undefined),
-				donor_email: donorEmail.trim() || undefined,
+				country: selectedCountry || undefined,
 				amount: finalAmount,
-				currency,
+				currency: storedCurrency,
+				donor_currency: selectedCurrency,
 				payment_method: paymentMethod,
 				is_anonymous: isAnonymous,
 				message: message.trim() || undefined,
-				manual_reference: paymentMethod !== 'stripe' ? manualReference.trim() : undefined,
-				manual_bank: paymentMethod !== 'stripe' ? manualBank.trim() : undefined
+				manual_reference: isManual ? manualReference.trim() : undefined,
+				manual_bank: isManual ? manualBank.trim() : undefined
 			};
 
 			const res = await fetch('/api/donations', {
@@ -161,17 +231,14 @@
 					toast.error('Error al procesar', 'No se pudo crear el intento de pago. Inténtalo de nuevo.');
 					return;
 				}
-				// ── Phase 2: mount Stripe Elements with the clientSecret ──
 				stripeClientSecret = result.clientSecret;
 				stripeDonationId = result.donationId;
 				stripeReady = true;
-				// The button now becomes "Pagar con tarjeta" which calls confirmStripe()
 			} else {
 				if (!result.donationId) {
 					toast.error('Error al procesar', 'No se pudo registrar la donación. Inténtalo de nuevo.');
 					return;
 				}
-				// Manual payment → go directly to confirmation
 				await goto(`/donar/confirmacion?id=${result.donationId}`);
 			}
 		} catch (e) {
@@ -181,7 +248,7 @@
 		}
 	}
 
-	// ─── Confirm Stripe payment (step 2 of Stripe flow) ───────────
+	// ─── Confirm Stripe payment ────────────────────────────────────
 	async function confirmStripe() {
 		if (!stripeFormRef) return;
 		submitting = true;
@@ -211,6 +278,45 @@
 		isCustom = false;
 		customAmount = '';
 	}
+
+	// ─── Country selector helpers ──────────────────────────────────
+	function openCountryDropdown() {
+		countryDropdownOpen = true;
+		countrySearchQuery = '';
+	}
+
+	function closeCountryDropdown() {
+		countryDropdownOpen = false;
+	}
+
+	function selectCountryOption(name: string) {
+		selectedCountry = name;
+		countryDropdownOpen = false;
+		countrySearchQuery = '';
+	}
+
+	function clearCountry() {
+		selectedCountry = '';
+		countrySearchQuery = '';
+	}
+
+	// Close dropdown on outside click
+	function handleCountryBlur(e: FocusEvent) {
+		const related = (e as any).relatedTarget as HTMLElement | null;
+		if (!related || !(related.closest('.country-dropdown-wrap'))) {
+			setTimeout(() => { countryDropdownOpen = false; }, 150);
+		}
+	}
+
+	// Payment method icon + label helpers
+	const METHOD_META: Record<string, { emoji: string; name: string; desc: string }> = {
+		stripe:       { emoji: '💳', name: 'Tarjeta de Crédito/Débito', desc: 'Pago seguro via Stripe' },
+		zelle:        { emoji: '⚡', name: 'Zelle',                      desc: 'Transferencia inmediata' },
+		bizum:        { emoji: '📲', name: 'Bizum',                      desc: 'Pago móvil España' },
+		crypto:       { emoji: '₿',  name: 'Cripto (USDt)',              desc: 'Wallet USDt (TRC-20)' },
+		pago_movil:   { emoji: '📱', name: 'Pago Móvil',                 desc: 'Transferencia inmediata' },
+		transferencia:{ emoji: '🏦', name: 'Transferencia Bancaria',      desc: 'Transferencia directa' }
+	};
 </script>
 
 <svelte:head>
@@ -375,18 +481,38 @@
 						</p>
 					</div>
 
-					<!-- Suggested amounts (based on payment method selected later — default USD) -->
+					<!-- ── Currency Selector ── -->
+					<div class="currency-section">
+						<p class="form-label">Moneda de donación</p>
+						<div class="currency-grid">
+							{#each CURRENCY_OPTIONS as opt}
+								<button
+									class="currency-btn"
+									class:selected={selectedCurrency === opt.id}
+									onclick={() => selectCurrency(opt.id)}
+									id="currency-{opt.id}"
+								>
+									<span class="currency-flag">{opt.flag}</span>
+									<span class="currency-name">{opt.label}</span>
+								</button>
+							{/each}
+						</div>
+					</div>
+
+					<hr class="divider" />
+
+					<!-- Suggested amounts -->
 					<div class="amount-section">
-						<p class="form-label">Monto (USD)</p>
+						<p class="form-label">Monto ({currencyLabel})</p>
 						<div class="amount-grid">
-							{#each SUGGESTED_AMOUNTS_USD as val}
+							{#each suggestedAmounts as val}
 								<button
 									class="amount-btn"
 									class:selected={!isCustom && amount === val}
 									onclick={() => selectAmount(val)}
 									id="amount-{val}"
 								>
-									${val}
+									{currencySymbol}{val}
 								</button>
 							{/each}
 							<button
@@ -400,9 +526,9 @@
 
 						{#if isCustom}
 							<div class="form-group" style="margin-top:var(--space-4);">
-								<label class="form-label" for="custom-amount">Monto personalizado (USD)</label>
+								<label class="form-label" for="custom-amount">Monto personalizado ({currencyLabel})</label>
 								<div class="input-prefix-wrap">
-									<span class="input-prefix">$</span>
+									<span class="input-prefix">{currencySymbol}</span>
 									<input
 										id="custom-amount"
 										type="number"
@@ -420,6 +546,12 @@
 
 						{#if errors.amount}
 							<p class="form-error">{errors.amount}</p>
+						{/if}
+
+						{#if selectedCurrency === 'VES' && data.bcvRate}
+							<p class="ves-hint">
+								💡 Los montos se muestran en USD. En el paso de pago verás el equivalente en bolívares a la tasa BCV (Bs. {data.bcvRate.toFixed(2)}).
+							</p>
 						{/if}
 					</div>
 
@@ -457,17 +589,79 @@
 										bind:value={donorName}
 									/>
 								</div>
+
+								<!-- Country Selector with search -->
 								<div class="form-group">
-									<label class="form-label" for="donor-email">
-										Tu correo <span style="color:var(--text-muted);">(privado)</span>
+									<label class="form-label" for="country-trigger">
+										País de origen <span style="color:var(--text-muted);">(opcional)</span>
 									</label>
-									<input
-										id="donor-email"
-										type="email"
-										class="form-input"
-										placeholder="tu@correo.com"
-										bind:value={donorEmail}
-									/>
+									<div class="country-dropdown-wrap" onfocusout={handleCountryBlur}>
+										<button
+											id="country-trigger"
+											class="country-trigger"
+											class:open={countryDropdownOpen}
+											onclick={openCountryDropdown}
+											type="button"
+											aria-haspopup="listbox"
+											aria-expanded={countryDropdownOpen}
+										>
+											{#if selectedCountry}
+												<span class="country-selected-flag">
+													{COUNTRIES.find(c => c.name === selectedCountry)?.flag ?? '🌍'}
+												</span>
+												<span class="country-selected-name">{selectedCountry}</span>
+												<span
+													class="country-clear-btn"
+													onclick={(e) => { e.stopPropagation(); clearCountry(); }}
+													role="button"
+													tabindex="0"
+													onkeydown={(e) => e.key === 'Enter' && clearCountry()}
+													aria-label="Limpiar país"
+												>✕</span>
+											{:else}
+												<span class="country-placeholder">Seleccionar país…</span>
+												<svg class="country-chevron" width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+													<path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+												</svg>
+											{/if}
+										</button>
+
+										{#if countryDropdownOpen}
+											<div class="country-dropdown" role="listbox">
+												<div class="country-search-wrap">
+													<svg class="country-search-icon" width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+														<path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+													</svg>
+													<input
+														bind:this={countryInputRef}
+														class="country-search-input"
+														type="text"
+														placeholder="Buscar país…"
+														bind:value={countrySearchQuery}
+														aria-label="Buscar país"
+													/>
+												</div>
+												<div class="country-list">
+													{#each filteredCountries as country}
+														<button
+															class="country-option"
+															class:selected={selectedCountry === country.name}
+															onclick={() => selectCountryOption(country.name)}
+															type="button"
+															role="option"
+															aria-selected={selectedCountry === country.name}
+														>
+															<span class="country-option-flag">{country.flag}</span>
+															<span class="country-option-name">{country.name}</span>
+														</button>
+													{/each}
+													{#if filteredCountries.length === 0}
+														<p class="country-no-results">Sin resultados para "{countrySearchQuery}"</p>
+													{/if}
+												</div>
+											</div>
+										{/if}
+									</div>
 								</div>
 							</div>
 						{/if}
@@ -515,153 +709,170 @@
 								<strong>{selectedProject.name}</strong>
 							</div>
 						{/if}
+						{#if selectedCountry}
+							<div class="summary-row">
+								<span>País</span>
+								<strong>
+									{COUNTRIES.find(c => c.name === selectedCountry)?.flag ?? '🌍'}
+									{selectedCountry}
+								</strong>
+							</div>
+						{/if}
 						<div class="summary-row summary-total">
 							<span>Monto</span>
-							<strong class="text-gradient" style="font-size:var(--text-2xl);">
-								{formatCurrency(finalAmount, 'USD')}
-							</strong>
+							<div class="summary-amount-wrap">
+								<strong class="text-gradient" style="font-size:var(--text-2xl);">
+									{#if selectedCurrency === 'EUR'}
+										{formatCurrency(finalAmount, 'EUR')}
+									{:else if selectedCurrency === 'USDT'}
+										{formatCurrency(finalAmount, 'USDT')}
+									{:else if selectedCurrency === 'VES' && vesEquivalent !== null}
+										{formatCurrency(vesEquivalent, 'VES')}
+									{:else}
+										{formatCurrency(finalAmount, 'USD')}
+									{/if}
+								</strong>
+								{#if selectedCurrency === 'VES'}
+									<span class="summary-ves-equiv">
+										≈ {formatCurrency(finalAmount, 'USD')} a tasa BCV
+									</span>
+								{:else if vesEquivalent !== null}
+									<span class="summary-ves-equiv">
+										≈ Bs. {Math.round(vesEquivalent).toLocaleString('es-VE')} a tasa BCV
+									</span>
+								{/if}
+							</div>
 						</div>
 					</div>
 
 					<!-- Payment Method Selector -->
 					<div class="payment-methods">
-						<!-- Stripe -->
-						<button
-							class="payment-option"
-							class:selected={paymentMethod === 'stripe'}
-							onclick={() => { paymentMethod = 'stripe'; isCustom = false; }}
-							id="method-stripe"
-						>
-							<div class="payment-option-header">
-								<span class="payment-icon">💳</span>
-								<div>
-									<p class="payment-name">Tarjeta de Crédito/Débito</p>
-									<p class="payment-desc">Pago seguro via Stripe · Solo USD</p>
-								</div>
-								<div class="payment-radio" class:active={paymentMethod === 'stripe'}></div>
-							</div>
-						</button>
-
-						<!-- Pago Móvil -->
-						<button
-							class="payment-option"
-							class:selected={paymentMethod === 'pago_movil'}
-							onclick={() => { paymentMethod = 'pago_movil'; isCustom = false; }}
-							id="method-pago-movil"
-						>
-							<div class="payment-option-header">
-								<span class="payment-icon">📱</span>
-								<div>
-									<p class="payment-name">Pago Móvil</p>
-									<p class="payment-desc">Transferencia inmediata · Solo VES</p>
-								</div>
-								<div class="payment-radio" class:active={paymentMethod === 'pago_movil'}></div>
-							</div>
-
-							{#if paymentMethod === 'pago_movil'}
-								<div class="bank-details animate-fade-in">
-									<p class="bank-title">Datos para el pago móvil:</p>
-									<div class="bank-info-grid">
-										<div class="bank-info-item">
-											<span class="bank-label">Banco</span>
-											<span class="bank-value">{BANK_DETAILS.pago_movil.bank}</span>
-										</div>
-										<div class="bank-info-item">
-											<span class="bank-label">Teléfono</span>
-											<span class="bank-value">{BANK_DETAILS.pago_movil.phone}</span>
-										</div>
-										<div class="bank-info-item">
-											<span class="bank-label">Cédula</span>
-											<span class="bank-value">{BANK_DETAILS.pago_movil.cedula}</span>
-										</div>
-										<div class="bank-info-item">
-											<span class="bank-label">Titular</span>
-											<span class="bank-value">{BANK_DETAILS.pago_movil.name}</span>
-										</div>
+						{#each availablePaymentMethods as method}
+							{@const meta = METHOD_META[method]}
+							<button
+								class="payment-option"
+								class:selected={paymentMethod === method}
+								onclick={() => { paymentMethod = method; stripeReady = false; stripeClientSecret = ''; }}
+								id="method-{method}"
+							>
+								<div class="payment-option-header">
+									<span class="payment-icon">{meta.emoji}</span>
+									<div>
+										<p class="payment-name">{meta.name}</p>
+										<p class="payment-desc">{meta.desc}</p>
 									</div>
+									<div class="payment-radio" class:active={paymentMethod === method}></div>
 								</div>
-							{/if}
-						</button>
 
-						<!-- Transferencia -->
-						<button
-							class="payment-option"
-							class:selected={paymentMethod === 'transferencia'}
-							onclick={() => { paymentMethod = 'transferencia'; isCustom = false; }}
-							id="method-transferencia"
-						>
-							<div class="payment-option-header">
-								<span class="payment-icon">🏦</span>
-								<div>
-									<p class="payment-name">Transferencia Bancaria</p>
-									<p class="payment-desc">Transferencia directa · Solo VES</p>
-								</div>
-								<div class="payment-radio" class:active={paymentMethod === 'transferencia'}></div>
-							</div>
-
-							{#if paymentMethod === 'transferencia'}
-								<div class="bank-details animate-fade-in">
-									<p class="bank-title">Datos bancarios:</p>
-									<div class="bank-info-grid">
-										<div class="bank-info-item">
-											<span class="bank-label">Banco</span>
-											<span class="bank-value">{BANK_DETAILS.transferencia.bank}</span>
+								<!-- Inline payment details per method -->
+								{#if paymentMethod === method}
+									{#if method === 'pago_movil'}
+										<div class="bank-details animate-fade-in">
+											<p class="bank-title">Datos para el pago móvil:</p>
+											<div class="bank-info-grid">
+												<div class="bank-info-item"><span class="bank-label">Banco</span><span class="bank-value">{BANK_DETAILS.pago_movil.bank}</span></div>
+												<div class="bank-info-item"><span class="bank-label">Teléfono</span><span class="bank-value">{BANK_DETAILS.pago_movil.phone}</span></div>
+												<div class="bank-info-item"><span class="bank-label">Cédula</span><span class="bank-value">{BANK_DETAILS.pago_movil.cedula}</span></div>
+												<div class="bank-info-item"><span class="bank-label">Titular</span><span class="bank-value">{BANK_DETAILS.pago_movil.name}</span></div>
+											</div>
 										</div>
-										<div class="bank-info-item">
-											<span class="bank-label">Cuenta</span>
-											<span class="bank-value">{BANK_DETAILS.transferencia.account_number}</span>
+									{:else if method === 'transferencia'}
+										<div class="bank-details animate-fade-in">
+											<p class="bank-title">Datos bancarios:</p>
+											<div class="bank-info-grid">
+												<div class="bank-info-item"><span class="bank-label">Banco</span><span class="bank-value">{BANK_DETAILS.transferencia.bank}</span></div>
+												<div class="bank-info-item"><span class="bank-label">Cuenta</span><span class="bank-value">{BANK_DETAILS.transferencia.account_number}</span></div>
+												<div class="bank-info-item"><span class="bank-label">RIF</span><span class="bank-value">{BANK_DETAILS.transferencia.rif}</span></div>
+												<div class="bank-info-item"><span class="bank-label">Titular</span><span class="bank-value">{BANK_DETAILS.transferencia.name}</span></div>
+											</div>
 										</div>
-										<div class="bank-info-item">
-											<span class="bank-label">RIF</span>
-											<span class="bank-value">{BANK_DETAILS.transferencia.rif}</span>
+									{:else if method === 'zelle'}
+										<div class="bank-details animate-fade-in">
+											<p class="bank-title">Datos para Zelle:</p>
+											<div class="bank-info-grid">
+												<div class="bank-info-item"><span class="bank-label">Email</span><span class="bank-value">{BANK_DETAILS.zelle.email}</span></div>
+												<div class="bank-info-item"><span class="bank-label">Titular</span><span class="bank-value">{BANK_DETAILS.zelle.name}</span></div>
+											</div>
 										</div>
-										<div class="bank-info-item">
-											<span class="bank-label">Titular</span>
-											<span class="bank-value">{BANK_DETAILS.transferencia.name}</span>
+									{:else if method === 'bizum'}
+										<div class="bank-details animate-fade-in">
+											<p class="bank-title">Datos para Bizum:</p>
+											<div class="bank-info-grid">
+												<div class="bank-info-item"><span class="bank-label">Teléfono</span><span class="bank-value">{BANK_DETAILS.bizum.phone}</span></div>
+												<div class="bank-info-item"><span class="bank-label">Titular</span><span class="bank-value">{BANK_DETAILS.bizum.name}</span></div>
+											</div>
 										</div>
-									</div>
-								</div>
-							{/if}
-						</button>
+									{:else if method === 'crypto'}
+										<div class="bank-details crypto-details animate-fade-in">
+											<p class="bank-title">Dirección de wallet ({BANK_DETAILS.crypto.network}):</p>
+											<div class="crypto-address-wrap">
+												<code class="crypto-address">{BANK_DETAILS.crypto.address}</code>
+												<span
+													class="copy-btn"
+													onclick={() => navigator.clipboard.writeText(BANK_DETAILS.crypto.address)}
+													role="button"
+													tabindex="0"
+													onkeydown={(e) => e.key === 'Enter' && navigator.clipboard.writeText(BANK_DETAILS.crypto.address)}
+												>
+													📋 Copiar
+												</span>
+											</div>
+											<p class="crypto-hint">{BANK_DETAILS.crypto.qr_hint}</p>
+										</div>
+									{/if}
+								{/if}
+							</button>
+						{/each}
 					</div>
 
-					<!-- Manual payment fields -->
+					<!-- Manual payment reference fields (all non-stripe) -->
 					{#if paymentMethod !== 'stripe'}
 						<div class="manual-fields animate-fade-in-up">
 							<p class="manual-instruction">
-								Realiza el pago con los datos de arriba, luego ingresa el número de referencia aquí para confirmar tu donación.
+								{#if paymentMethod === 'crypto'}
+									Envía exactamente <strong>{currencySymbol}{finalAmount} USDt</strong> a la dirección de arriba, luego ingresa el hash de la transacción aquí para confirmar tu donación.
+								{:else}
+									Realiza el pago con los datos de arriba, luego ingresa el número de referencia aquí para confirmar tu donación.
+								{/if}
+								{#if vesEquivalent !== null}
+									<br/><strong>Monto a transferir: Bs. {Math.round(vesEquivalent).toLocaleString('es-VE')}</strong> (equivalente en bolívares a tasa BCV Bs. {data.bcvRate?.toFixed(2)}).
+								{/if}
 							</p>
 							<div class="form-row">
 								<div class="form-group">
 									<label class="form-label" for="manual-ref">
-										Número de referencia <span class="required">*</span>
+										{#if paymentMethod === 'crypto'}Hash / TxID{:else}Número de referencia{/if} <span class="required">*</span>
 									</label>
 									<input
 										id="manual-ref"
 										type="text"
 										class="form-input"
 										class:error={errors.manualReference}
-										placeholder="Ej: 00123456789"
+										placeholder={paymentMethod === 'crypto' ? 'Ej: 0xa1b2c3...' : 'Ej: 00123456789'}
 										bind:value={manualReference}
 									/>
 									{#if errors.manualReference}
 										<p class="form-error">{errors.manualReference}</p>
 									{/if}
 								</div>
-								<div class="form-group">
-									<label class="form-label" for="manual-bank">Banco de origen</label>
-									<input
-										id="manual-bank"
-										type="text"
-										class="form-input"
-										placeholder="Ej: Banesco"
-										bind:value={manualBank}
-									/>
-								</div>
+								{#if paymentMethod !== 'crypto'}
+									<div class="form-group">
+										<label class="form-label" for="manual-bank">
+											{#if paymentMethod === 'zelle' || paymentMethod === 'bizum'}Banco / Entidad de origen{:else}Banco de origen{/if}
+										</label>
+										<input
+											id="manual-bank"
+											type="text"
+											class="form-input"
+											placeholder="Ej: Banesco"
+											bind:value={manualBank}
+										/>
+									</div>
+								{/if}
 							</div>
 						</div>
 					{:else}
-						<!-- Stripe Elements: mounted once clientSecret is ready -->
+						<!-- Stripe Elements -->
 						{#if stripeReady}
 							<div class="stripe-elements-wrap animate-fade-in-up">
 								<p class="stripe-ready-label">Ingresa los datos de tu tarjeta:</p>
@@ -687,40 +898,32 @@
 					<!-- Submit -->
 					<div class="step-actions">
 						{#if stripeReady && paymentMethod === 'stripe'}
-							<!-- Phase 2: confirm card payment -->
-							<Button
-								variant="primary"
-								size="xl"
-								loading={submitting}
-								disabled={submitting}
-								onclick={confirmStripe}
-								id="btn-pay-card"
-							>
-								{submitting ? 'Procesando pago…' : `Pagar ${formatCurrency(finalAmount, 'USD')}`}
+							<Button variant="primary" size="xl" loading={submitting} disabled={submitting} onclick={confirmStripe} id="btn-pay-card">
+								{submitting ? 'Procesando pago…' : `Pagar ${selectedCurrency === 'EUR' ? formatCurrency(finalAmount, 'EUR') : formatCurrency(finalAmount, 'USD')}`}
 							</Button>
 							<button class="btn-reset-stripe" onclick={() => { stripeReady = false; stripeClientSecret = ''; }}>← Cambiar método de pago</button>
 						{:else}
-							<!-- Phase 1: create donation record and PaymentIntent (or submit manual) -->
-							<Button
-								variant="primary"
-								size="xl"
-								loading={submitting}
-								disabled={submitting}
-								onclick={submitDonation}
-								id="btn-submit-donation"
-							>
+							<Button variant="primary" size="xl" loading={submitting} disabled={submitting} onclick={submitDonation} id="btn-submit-donation">
 								{#if submitting}
 									Procesando…
 								{:else if paymentMethod === 'stripe'}
-									Continuar al pago — {formatCurrency(finalAmount, 'USD')}
+									Continuar al pago —
+									{selectedCurrency === 'EUR' ? formatCurrency(finalAmount, 'EUR') : formatCurrency(finalAmount, 'USD')}
 								{:else}
-									Confirmar donación — {formatCurrency(finalAmount, 'USD')}
+									Confirmar donación —
+									{#if selectedCurrency === 'EUR'}
+										{formatCurrency(finalAmount, 'EUR')}
+									{:else if selectedCurrency === 'USDT'}
+										{formatCurrency(finalAmount, 'USDT')}
+									{:else if selectedCurrency === 'VES' && vesEquivalent !== null}
+										{formatCurrency(vesEquivalent, 'VES')}
+									{:else}
+										{formatCurrency(finalAmount, 'USD')}
+									{/if}
 								{/if}
 							</Button>
 						{/if}
-						<p class="submit-note">
-							Tu información está protegida y encriptada
-						</p>
+						<p class="submit-note">Tu información está protegida y encriptada</p>
 					</div>
 				</div>
 			{/if}
@@ -960,6 +1163,38 @@
 	.no-projects p { color: var(--text-secondary); font-size: var(--text-sm); }
 	.no-projects strong { color: var(--text-primary); }
 
+	/* ─── Currency Selector ──────── */
+	.currency-section { display: flex; flex-direction: column; gap: var(--space-3); }
+	.currency-grid {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: var(--space-2);
+	}
+
+	.currency-btn {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--space-1);
+		padding: var(--space-3) var(--space-2);
+		background: var(--bg-elevated);
+		border: 2px solid var(--border-subtle);
+		border-radius: 0;
+		color: var(--text-secondary);
+		font-family: var(--font-display);
+		cursor: pointer;
+		transition: all var(--duration-fast) var(--ease-out);
+	}
+	.currency-btn:hover { border-color: var(--color-primary); color: var(--text-primary); }
+	.currency-btn.selected {
+		border-color: var(--color-primary);
+		background: rgba(20,96,154,0.1);
+		color: var(--blue-400);
+		box-shadow: 0 0 0 3px rgba(20,96,154,0.15);
+	}
+	.currency-flag { font-size: 1.5rem; line-height: 1; }
+	.currency-name { font-size: var(--text-xs); font-weight: 700; white-space: nowrap; }
+
 	/* ─── Amount ──────────────────── */
 	.amount-section { display: flex; flex-direction: column; gap: var(--space-3); }
 	.amount-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2); }
@@ -993,6 +1228,15 @@
 	}
 	.input-prefix-wrap .form-input { padding-left: 2rem; }
 
+	.ves-hint {
+		font-size: var(--text-sm);
+		color: var(--color-warning, #d97706);
+		background: rgba(217,119,6,0.08);
+		border: 1px solid rgba(217,119,6,0.2);
+		padding: var(--space-3) var(--space-4);
+		line-height: 1.6;
+	}
+
 	/* ─── Donor Section ─────────────── */
 	.donor-section { display: flex; flex-direction: column; gap: var(--space-4); }
 	.donor-section-title { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 700; }
@@ -1020,6 +1264,106 @@
 	}
 	.toggle-input:checked + .toggle-switch { background: var(--color-primary); }
 	.toggle-input:checked + .toggle-switch::after { transform: translateX(1.1rem); }
+
+	/* ─── Country Dropdown ────────── */
+	.country-dropdown-wrap {
+		position: relative;
+	}
+
+	.country-trigger {
+		width: 100%;
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		padding: var(--space-3) var(--space-4);
+		background: var(--bg-elevated);
+		border: 1.5px solid var(--border-default);
+		border-radius: 0;
+		font-family: var(--font-body);
+		font-size: var(--text-sm);
+		color: var(--text-primary);
+		cursor: pointer;
+		text-align: left;
+		transition: border-color var(--duration-fast) var(--ease-out);
+		min-height: 2.75rem;
+	}
+	.country-trigger:hover, .country-trigger.open {
+		border-color: var(--color-primary);
+	}
+	.country-placeholder { color: var(--text-muted); flex: 1; }
+	.country-chevron { margin-left: auto; color: var(--text-muted); flex-shrink: 0; }
+	.country-selected-flag { font-size: 1.1rem; flex-shrink: 0; }
+	.country-selected-name { flex: 1; font-size: var(--text-sm); color: var(--text-primary); }
+	.country-clear-btn {
+		background: none;
+		border: none;
+		color: var(--text-muted);
+		cursor: pointer;
+		padding: 2px 4px;
+		font-size: var(--text-xs);
+		border-radius: 4px;
+		transition: all var(--duration-fast);
+	}
+	.country-clear-btn:hover { background: var(--bg-secondary); color: var(--text-primary); }
+
+	.country-dropdown {
+		position: absolute;
+		top: calc(100% + 4px);
+		left: 0;
+		right: 0;
+		background: var(--bg-elevated);
+		border: 1.5px solid var(--color-primary);
+		border-radius: 0;
+		z-index: 50;
+		box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+		animation: fade-in 0.15s var(--ease-out);
+	}
+
+	.country-search-wrap {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		padding: var(--space-2) var(--space-3);
+		border-bottom: 1px solid var(--border-subtle);
+	}
+	.country-search-icon { color: var(--text-muted); flex-shrink: 0; }
+	.country-search-input {
+		flex: 1;
+		border: none;
+		background: transparent;
+		font-family: var(--font-body);
+		font-size: var(--text-sm);
+		color: var(--text-primary);
+		outline: none;
+		padding: var(--space-1) 0;
+	}
+	.country-search-input::placeholder { color: var(--text-muted); }
+
+	.country-list {
+		max-height: 220px;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+	}
+	.country-option {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		padding: var(--space-2) var(--space-3);
+		background: none;
+		border: none;
+		width: 100%;
+		text-align: left;
+		font-family: var(--font-body);
+		font-size: var(--text-sm);
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: background var(--duration-fast);
+	}
+	.country-option:hover { background: rgba(20,96,154,0.08); color: var(--text-primary); }
+	.country-option.selected { background: rgba(20,96,154,0.12); color: var(--blue-400); font-weight: 600; }
+	.country-option-flag { font-size: 1.1rem; flex-shrink: 0; }
+	.country-option-name { flex: 1; }
+	.country-no-results { padding: var(--space-4); text-align: center; font-size: var(--text-sm); color: var(--text-muted); }
 
 	/* ─── Payment ─────────────────── */
 	.payment-methods { display: flex; flex-direction: column; gap: var(--space-3); }
@@ -1059,9 +1403,7 @@
 		transition: all var(--duration-fast) var(--ease-out);
 		position: relative;
 	}
-	.payment-radio.active {
-		border-color: var(--color-primary);
-	}
+	.payment-radio.active { border-color: var(--color-primary); }
 	.payment-radio.active::after {
 		content: '';
 		position: absolute; inset: 3px;
@@ -1081,6 +1423,40 @@
 	.bank-info-item { display: flex; flex-direction: column; gap: 2px; }
 	.bank-label { font-size: var(--text-xs); color: var(--text-muted); }
 	.bank-value { font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); font-family: var(--font-display); }
+
+	/* Crypto details */
+	.crypto-details { }
+	.crypto-address-wrap {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		margin-bottom: var(--space-3);
+		flex-wrap: wrap;
+	}
+	.crypto-address {
+		font-family: monospace;
+		font-size: var(--text-sm);
+		color: var(--blue-400);
+		background: rgba(20,96,154,0.08);
+		padding: var(--space-2) var(--space-3);
+		border: 1px solid rgba(20,96,154,0.2);
+		word-break: break-all;
+		flex: 1;
+	}
+	.copy-btn {
+		padding: var(--space-2) var(--space-3);
+		background: rgba(20,96,154,0.1);
+		border: 1px solid rgba(20,96,154,0.3);
+		color: var(--blue-400);
+		font-size: var(--text-xs);
+		font-weight: 600;
+		cursor: pointer;
+		font-family: var(--font-body);
+		transition: all var(--duration-fast);
+		white-space: nowrap;
+	}
+	.copy-btn:hover { background: rgba(20,96,154,0.2); }
+	.crypto-hint { font-size: var(--text-xs); color: var(--text-muted); line-height: 1.5; }
 
 	/* Manual fields */
 	.manual-fields { display: flex; flex-direction: column; gap: var(--space-4); }
@@ -1130,25 +1506,37 @@
 		border-top: 1px solid var(--border-subtle);
 	}
 	.summary-total span { font-size: var(--text-base); font-weight: 600; color: var(--text-secondary); }
+	.summary-amount-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+	.summary-ves-equiv {
+		font-size: var(--text-xs);
+		color: var(--text-muted);
+		font-family: var(--font-display);
+	}
 
 	/* Step actions */
 	.step-actions { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); margin-top: var(--space-4); }
 	.step-actions :global(.btn) { width: 100%; max-width: 400px; justify-content: center; }
 	.submit-note { font-size: var(--text-xs); color: var(--text-muted); }
 
+	/* Divider */
+	.divider { border: none; border-top: 1px solid var(--border-subtle); margin: 0; }
+
 	/* Responsive */
 	@media (max-width: 768px) {
 		.donate-card { padding: var(--space-6) var(--space-5); }
 		.areas-select-grid { grid-template-columns: repeat(2, 1fr); }
+		.currency-grid { grid-template-columns: repeat(2, 1fr); }
 		.amount-grid { grid-template-columns: repeat(3, 1fr); }
 		.form-row { grid-template-columns: 1fr; }
 		.bank-info-grid { grid-template-columns: 1fr; }
 	}
 	@media (max-width: 480px) {
 		.areas-select-grid { grid-template-columns: 1fr 1fr; }
+		.currency-grid { grid-template-columns: repeat(2, 1fr); }
 		.amount-grid { grid-template-columns: repeat(2, 1fr); }
 		.step-connector { min-width: 20px; }
 	}
+
 	/* Stripe Elements */
 	.stripe-elements-wrap { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-5) 0; }
 	.stripe-ready-label { font-size: var(--text-sm); font-weight: 600; color: var(--text-secondary); }
@@ -1164,4 +1552,6 @@
 		transition: color var(--duration-fast);
 	}
 	.btn-reset-stripe:hover { color: var(--text-secondary); }
+
+	.required { color: var(--color-error, #ef4444); }
 </style>

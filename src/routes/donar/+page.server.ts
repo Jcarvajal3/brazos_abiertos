@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
 import type { Area } from '$lib/types';
 
-export const load: PageServerLoad = async ({ locals, url }) => {
+export const load: PageServerLoad = async ({ locals, url, fetch }) => {
 	const preselectedAreaSlug = url.searchParams.get('area');
 
 	const { data: areasRaw } = await locals.supabase
@@ -30,5 +30,19 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		}
 	}
 
-	return { areas, preselectedArea, initialProjects };
+	// Fetch BCV rate so the form can show VES equivalents
+	let bcvRate = 40.0;
+	try {
+		const bcvRes = await fetch('/api/bcv');
+		if (bcvRes.ok) {
+			const bcvData = await bcvRes.json();
+			if (bcvData && typeof bcvData.rate === 'number') {
+				bcvRate = bcvData.rate;
+			}
+		}
+	} catch (e) {
+		console.error('Error fetching BCV rate for donation form:', e);
+	}
+
+	return { areas, preselectedArea, initialProjects, bcvRate };
 };

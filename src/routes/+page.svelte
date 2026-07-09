@@ -16,6 +16,26 @@
 	let stats = $state(data.stats);
 	let expenseStats = $state(data.expenseStats);
 
+	const eurToUsdRate: number = (data as any).eurToUsdRate ?? 1.08;
+	const usdtToUsdRate: number = (data as any).usdtToUsdRate ?? 1.0;
+
+	// ─── Computed totals: all currencies → USD and VES ───────────
+	// total_usd = USD + VES/bcvRate + EUR*eurUsd + USDT*1
+	const totalRaisedUsd = $derived(
+		(stats.total_raised_usd ?? 0)
+		+ (data.bcvRate ? (stats.total_raised_ves ?? 0) / data.bcvRate : 0)
+		+ ((stats as any).total_raised_eur ?? 0) * eurToUsdRate
+		+ ((stats as any).total_raised_usdt ?? 0) * usdtToUsdRate
+	);
+	// total_ves = USD*bcv + VES + EUR*eurUsd*bcv + USDT*bcv
+	const totalRaisedVes = $derived(
+		(data.bcvRate ?? 1) * (
+			(stats.total_raised_usd ?? 0)
+			+ ((stats as any).total_raised_eur ?? 0) * eurToUsdRate
+			+ ((stats as any).total_raised_usdt ?? 0) * usdtToUsdRate
+		) + (stats.total_raised_ves ?? 0)
+	);
+
 	// UI state
 	let showIncomeModal = $state(false);
 	let showExpenseModal = $state(false);
@@ -42,6 +62,36 @@
 			: recentDonations.filter((d: any) => d.area?.slug === activeTab)
 	);
 
+	// Convert any donation to USD equivalent for display
+	function donationToUsd(d: any): number {
+		const amt = Number(d.amount) || 0;
+		switch (d.currency) {
+			case 'VES':  return data.bcvRate ? amt / data.bcvRate : 0;
+			case 'EUR':  return amt * eurToUsdRate;
+			case 'USDT': return amt * usdtToUsdRate;
+			default:     return amt; // USD
+		}
+	}
+
+	// Human-readable currency label for the feed
+	function donationAmountLabel(d: any): string {
+		if (d.currency === 'VES' && data.bcvRate) {
+			return formatCurrency(donationToUsd(d), 'USD');
+		}
+		return formatCurrency(d.amount, d.currency);
+	}
+
+	// Tooltip / secondary info
+	function donationAmountSecondary(d: any): string | null {
+		if (d.currency === 'VES' && data.bcvRate) {
+			return `Bs. ${Math.round(d.amount).toLocaleString('es-VE')}`;
+		}
+		if ((d.currency === 'EUR' || d.currency === 'USDT') && data.bcvRate) {
+			return `≈ ${formatCurrency(donationToUsd(d), 'USD')}`;
+		}
+		return null;
+	}
+
 	onMount(() => {
 		// Subscribe to new confirmed donations in real time
 		donationChannel = supabase
@@ -57,18 +107,20 @@
 				async (payload) => {
 					const { data: newDonation } = await supabase
 						.from('donations')
-						.select('id, donor_name, is_anonymous, amount, currency, confirmed_at, message, area:areas(name, icon, slug)')
+						.select('id, donor_name, is_anonymous, amount, currency, donor_currency, country, confirmed_at, message, area:areas(name, icon, slug)')
 						.eq('id', payload.new.id)
 						.single();
 
 					if (newDonation) {
 						const d = newDonation as any;
 						recentDonations = [d, ...recentDonations].slice(0, 50);
-						if (d.currency === 'USD') {
-							stats = { ...stats, total_raised_usd: stats.total_raised_usd + d.amount, total_donations: stats.total_donations + 1 };
-						} else {
-							stats = { ...stats, total_raised_ves: stats.total_raised_ves + d.amount, total_donations: stats.total_donations + 1 };
-						}
+						// Update stats for all currencies
+						const newStats = { ...stats, total_donations: stats.total_donations + 1 };
+						if (d.currency === 'USD')  newStats.total_raised_usd  = (stats.total_raised_usd  ?? 0) + d.amount;
+						if (d.currency === 'VES')  newStats.total_raised_ves  = (stats.total_raised_ves  ?? 0) + d.amount;
+						if (d.currency === 'EUR')  (newStats as any).total_raised_eur  = ((stats as any).total_raised_eur  ?? 0) + d.amount;
+						if (d.currency === 'USDT') (newStats as any).total_raised_usdt = ((stats as any).total_raised_usdt ?? 0) + d.amount;
+						stats = newStats;
 					}
 				}
 			)
@@ -115,7 +167,124 @@
 			year: 'numeric', month: 'short', day: 'numeric'
 		});
 	}
+
+	// ─── Area distribution chart calculation ──────────────────────
+	function expenseToUsd(e: any): number {
+		const amt = Number(e.amount) || 0;
+		if (e.currency === 'VES' && data.bcvRate) {
+			return amt / data.bcvRate;
+		}
+		return amt;
+	}
+
+	function getDistribution(items: any[], isExpense: boolean) {
+		const groups: Record<string, { value: number; color: string; icon: string; name: string }> = {};
+		let total = 0;
+		for (const item of items) {
+			const areaName = item.area?.name || 'General';
+			const areaSlug = item.area?.slug || 'general';
+			const areaColor = data.areas.find((a: any) => a.slug === areaSlug)?.color || '#9ca3af';
+			const areaIcon = item.area?.icon || 'help';
+			const usdVal = isExpense ? expenseToUsd(item) : donationToUsd(item);
+			total += usdVal;
+			if (!groups[areaName]) {
+				groups[areaName] = { value: 0, color: areaColor, icon: areaIcon, name: areaName };
+			}
+			groups[areaName].value += usdVal;
+		}
+		return {
+			total,
+			segments: Object.values(groups).sort((a, b) => b.value - a.value)
+		};
+	}
+
+	const incomeDistribution = $derived(getDistribution(recentDonations, false));
+	const expenseDistribution = $derived(getDistribution(data.recentExpenses ?? [], true));
+
+	function getPieSlices(segments: any[], total: number) {
+		let currentAngle = -90; // Start at top (12 o'clock)
+		return segments.map((seg) => {
+			const percentage = seg.value / total;
+			const angle = percentage * 360;
+
+			if (percentage >= 0.999) {
+				return {
+					...seg,
+					path: `M 100 20 A 80 80 0 1 1 99.99 20 Z`,
+					percentage: 100
+				};
+			}
+
+			const r = 80;
+			const cx = 100;
+			const cy = 100;
+
+			const startAngleRad = (currentAngle * Math.PI) / 180;
+			const endAngleRad = ((currentAngle + angle) * Math.PI) / 180;
+
+			const x1 = cx + r * Math.cos(startAngleRad);
+			const y1 = cy + r * Math.sin(startAngleRad);
+			const x2 = cx + r * Math.cos(endAngleRad);
+			const y2 = cy + r * Math.sin(endAngleRad);
+
+			const largeArcFlag = angle > 180 ? 1 : 0;
+			const path = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+
+			currentAngle += angle;
+
+			return {
+				...seg,
+				path,
+				percentage: percentage * 100
+			};
+		});
+	}
 </script>
+
+{#snippet areaPieChart(distribution, title)}
+	{#if distribution.total > 0}
+		<div class="area-chart-card glass">
+			<h3 class="chart-card-title">{title}</h3>
+			<div class="chart-flex">
+				<div class="chart-wrapper">
+					<svg viewBox="0 0 200 200" class="pie-svg">
+						<!-- Outer background circle -->
+						<circle cx="100" cy="100" r="85" fill="var(--bg-elevated)" />
+						
+						<!-- Pie slices -->
+						{#each getPieSlices(distribution.segments, distribution.total) as slice}
+							<path
+								d={slice.path}
+								fill={slice.color}
+								class="pie-slice"
+							>
+								<title>{slice.name}: {slice.percentage.toFixed(1)}%</title>
+							</path>
+						{/each}
+						
+						<!-- Center cutout for donut look -->
+						<circle cx="100" cy="100" r="52" fill="var(--bg-elevated)" />
+						
+						<text x="100" y="96" text-anchor="middle" font-size="9" font-weight="600" fill="var(--text-muted)">TOTAL USD</text>
+						<text x="100" y="116" text-anchor="middle" font-size="13" font-weight="800" fill="var(--text-primary)">
+							${Math.round(distribution.total).toLocaleString('en-US')}
+						</text>
+					</svg>
+				</div>
+				<div class="chart-legend">
+					{#each distribution.segments as seg}
+						{@const pct = (seg.value / distribution.total) * 100}
+						<div class="legend-item">
+							<span class="legend-color-indicator" style="background-color: {seg.color}"></span>
+							<span class="legend-label-name" title={seg.name}>{seg.name}</span>
+							<span class="legend-value-val">{pct.toFixed(0)}%</span>
+						</div>
+					{/each}
+				</div>
+			</div>
+		</div>
+	{/if}
+{/snippet}
 
 <svelte:head>
 	<title>Brazos Abiertos Fundacion — Dona y reconstruye vidas</title>
@@ -188,14 +357,14 @@
 					<span class="finance-label">Ingresos totales</span>
 					<span class="finance-amount finance-amount-income">
 						$<AnimatedCounter
-							value={stats.total_raised_usd + (data.bcvRate ? stats.total_raised_ves / data.bcvRate : 0)}
-							format={(v) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-						/>
+						value={totalRaisedUsd}
+						format={(v) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+					/>
 					</span>
 					{#if data.bcvRate}
 						<span class="finance-secondary">
 							Bs.<AnimatedCounter
-								value={(stats.total_raised_usd * data.bcvRate) + stats.total_raised_ves}
+								value={totalRaisedVes}
 								format={(v) => v.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
 							/>
 						</span>
@@ -318,13 +487,11 @@
 							{/if}
 						</span>
 						<span class="feed-amount">
-							{#if d.currency === 'VES' && data.bcvRate}
-								{formatCurrency(d.amount / data.bcvRate, 'USD')}
-								<span class="feed-conversion" title="Pagado en Bs. {d.amount.toLocaleString('es-VE')} a tasa BCV Bs. {data.bcvRate.toFixed(2)}">
-									(Bs. {Math.round(d.amount).toLocaleString('es-VE')})
+							{donationAmountLabel(d)}
+							{#if donationAmountSecondary(d)}
+								<span class="feed-conversion">
+									({donationAmountSecondary(d)})
 								</span>
-							{:else}
-								{formatCurrency(d.amount, d.currency)}
 							{/if}
 						</span>
 					</div>
@@ -513,62 +680,73 @@
 				</div>
 			</div>
 
-			<div class="modal-table-wrap">
-				{#if recentDonations.length === 0}
-					<div class="modal-empty">
-						<p>Sin donaciones registradas aun.</p>
+			<div class="modal-grid">
+				<div class="modal-chart-col">
+					{@render areaPieChart(incomeDistribution, "Distribución de Ingresos")}
+				</div>
+				<div class="modal-table-col">
+					<div class="modal-table-wrap">
+						{#if recentDonations.length === 0}
+							<div class="modal-empty">
+								<p>Sin donaciones registradas aun.</p>
+							</div>
+						{:else}
+							<table class="modal-table">
+								<thead>
+									<tr>
+										<th>Donante</th>
+										<th>País</th>
+										<th>Área</th>
+										<th>Monto</th>
+										<th>Fecha</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each recentDonations as d (d.id)}
+										<tr>
+											<td>
+												<div class="table-donor-wrapper">
+													<div class="table-donor">
+														<div class="avatar avatar-orange" style="width:1.75rem;height:1.75rem;font-size:0.6rem;flex-shrink:0;">
+															{d.is_anonymous ? '?' : getInitials(getDonorDisplayName(d.is_anonymous, d.donor_name))}
+														</div>
+														<span>{getDonorDisplayName(d.is_anonymous, d.donor_name)}</span>
+													</div>
+													{#if d.message}
+														<div class="table-message" title={d.message}>
+															<span class="material-symbols-outlined" style="font-size:0.8rem;vertical-align:middle;color:var(--text-muted);">chat_bubble</span>
+															"{d.message}"
+														</div>
+													{/if}
+												</div>
+											</td>
+											<td class="table-country">
+												{#if d.country}
+													<span title={d.country}>{d.country}</span>
+												{:else}
+													<span class="table-no-receipt">—</span>
+												{/if}
+											</td>
+											<td>
+												<span class="table-area">
+													<span class="material-symbols-outlined" style="font-size:0.85rem;">{getAreaIconName(d.area?.icon)}</span>
+													{d.area?.name}
+												</span>
+											</td>
+											<td class="table-amount">
+												{donationAmountLabel(d)}
+												{#if donationAmountSecondary(d)}
+													<span class="table-conversion">({donationAmountSecondary(d)})</span>
+												{/if}
+											</td>
+											<td class="table-date">{d.confirmed_at ? formatDate(d.confirmed_at) : '—'}</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						{/if}
 					</div>
-				{:else}
-					<table class="modal-table">
-						<thead>
-							<tr>
-								<th>Donante</th>
-								<th>Area</th>
-								<th>Monto</th>
-								<th>Fecha</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each recentDonations as d (d.id)}
-								<tr>
-									<td>
-										<div class="table-donor-wrapper">
-											<div class="table-donor">
-												<div class="avatar avatar-orange" style="width:1.75rem;height:1.75rem;font-size:0.6rem;flex-shrink:0;">
-													{d.is_anonymous ? '?' : getInitials(getDonorDisplayName(d.is_anonymous, d.donor_name))}
-												</div>
-												<span>{getDonorDisplayName(d.is_anonymous, d.donor_name)}</span>
-											</div>
-											{#if d.message}
-												<div class="table-message" title={d.message}>
-													<span class="material-symbols-outlined" style="font-size:0.8rem;vertical-align:middle;color:var(--text-muted);">chat_bubble</span>
-													"{d.message}"
-												</div>
-											{/if}
-										</div>
-									</td>
-									<td>
-										<span class="table-area">
-											<span class="material-symbols-outlined" style="font-size:0.85rem;">{getAreaIconName(d.area?.icon)}</span>
-											{d.area?.name}
-										</span>
-									</td>
-									<td class="table-amount">
-										{#if d.currency === 'VES' && data.bcvRate}
-											{formatCurrency(d.amount / data.bcvRate, 'USD')}
-											<span class="table-conversion" title="Pagado en Bs. {d.amount.toLocaleString('es-VE')} a tasa BCV Bs. {data.bcvRate.toFixed(2)}">
-												(Bs. {Math.round(d.amount).toLocaleString('es-VE')})
-											</span>
-										{:else}
-											{formatCurrency(d.amount, d.currency)}
-										{/if}
-									</td>
-									<td class="table-date">{d.confirmed_at ? formatDate(d.confirmed_at) : '—'}</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				{/if}
+				</div>
 			</div>
 		</div>
 	</div>
@@ -606,63 +784,70 @@
 				</div>
 			</div>
 
-			<div class="modal-table-wrap">
-				{#if (data.recentExpenses ?? []).length === 0}
-					<div class="modal-empty">
-						<span class="material-symbols-outlined" style="font-size:2rem;color:var(--text-muted);">receipt_long</span>
-						<p>Sin egresos registrados aun.</p>
-						<span class="modal-empty-hint">Los egresos se registran desde el panel de administracion.</span>
+			<div class="modal-grid">
+				<div class="modal-chart-col">
+					{@render areaPieChart(expenseDistribution, "Distribución de Egresos")}
+				</div>
+				<div class="modal-table-col">
+					<div class="modal-table-wrap">
+						{#if (data.recentExpenses ?? []).length === 0}
+							<div class="modal-empty">
+								<span class="material-symbols-outlined" style="font-size:2rem;color:var(--text-muted);">receipt_long</span>
+								<p>Sin egresos registrados aun.</p>
+								<span class="modal-empty-hint">Los egresos se registran desde el panel de administracion.</span>
+							</div>
+						{:else}
+							<table class="modal-table">
+								<thead>
+									<tr>
+										<th>Concepto</th>
+										<th>Area</th>
+										<th>Monto</th>
+										<th>Fecha</th>
+										<th>Factura</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each data.recentExpenses as exp}
+										<tr>
+											<td>
+												<div class="table-expense-concept">
+													<strong>{exp.concept}</strong>
+													{#if exp.vendor}
+														<span class="table-vendor">{exp.vendor}</span>
+													{/if}
+												</div>
+											</td>
+											<td>
+												<span class="table-area">
+													<span class="material-symbols-outlined" style="font-size:0.85rem;">{getAreaIconName(exp.area?.icon)}</span>
+													{exp.area?.name}
+												</span>
+											</td>
+											<td class="table-amount">{formatCurrency(exp.amount, exp.currency)}</td>
+											<td class="table-date">{formatDate(exp.expense_date)}</td>
+											<td>
+												{#if exp.receipt_image_url}
+													<button class="receipt-btn" onclick={() => (expenseImageModal = exp.receipt_image_url)} aria-label="Ver factura">
+														<span class="material-symbols-outlined" style="font-size:1rem;">image</span>
+														Ver
+													</button>
+												{:else if exp.receipt_image_urls?.length}
+													<button class="receipt-btn" onclick={() => (expenseImageModal = exp.receipt_image_urls[0])} aria-label="Ver factura">
+														<span class="material-symbols-outlined" style="font-size:1rem;">image</span>
+														Ver ({exp.receipt_image_urls.length})
+													</button>
+												{:else}
+													<span class="table-no-receipt">—</span>
+												{/if}
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						{/if}
 					</div>
-				{:else}
-					<table class="modal-table">
-						<thead>
-							<tr>
-								<th>Concepto</th>
-								<th>Area</th>
-								<th>Monto</th>
-								<th>Fecha</th>
-								<th>Factura</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each data.recentExpenses as exp}
-								<tr>
-									<td>
-										<div class="table-expense-concept">
-											<strong>{exp.concept}</strong>
-											{#if exp.vendor}
-												<span class="table-vendor">{exp.vendor}</span>
-											{/if}
-										</div>
-									</td>
-									<td>
-										<span class="table-area">
-											<span class="material-symbols-outlined" style="font-size:0.85rem;">{getAreaIconName(exp.area?.icon)}</span>
-											{exp.area?.name}
-										</span>
-									</td>
-									<td class="table-amount">{formatCurrency(exp.amount, exp.currency)}</td>
-									<td class="table-date">{formatDate(exp.expense_date)}</td>
-									<td>
-										{#if exp.receipt_image_url}
-											<button class="receipt-btn" onclick={() => (expenseImageModal = exp.receipt_image_url)} aria-label="Ver factura">
-												<span class="material-symbols-outlined" style="font-size:1rem;">image</span>
-												Ver
-											</button>
-										{:else if exp.receipt_image_urls?.length}
-											<button class="receipt-btn" onclick={() => (expenseImageModal = exp.receipt_image_urls[0])} aria-label="Ver factura">
-												<span class="material-symbols-outlined" style="font-size:1rem;">image</span>
-												Ver ({exp.receipt_image_urls.length})
-											</button>
-										{:else}
-											<span class="table-no-receipt">—</span>
-										{/if}
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				{/if}
+				</div>
 			</div>
 		</div>
 	</div>
@@ -1115,6 +1300,12 @@
 		font-weight: 500;
 		margin-top: 2px;
 		text-align: right;
+	}
+
+	.table-country {
+		font-size: var(--text-xs);
+		color: var(--text-secondary);
+		white-space: nowrap;
 	}
 
 	.feed-message {
@@ -1704,7 +1895,127 @@
 		.feed-tabs { gap: var(--space-1); }
 		.cta-images { grid-template-columns: 1fr; }
 		.cta-image-large { min-height: 180px; }
-		.cta-stats-row { flex-direction: column; align-items: flex-start; gap: var(--space-4); }
 		.cta-stat-divider { display: none; }
+	}
+
+	/* ─── Modal Grid & Chart Layout ──────────────── */
+	.modal-grid {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-6);
+		margin-top: var(--space-6);
+	}
+
+	.modal-chart-col {
+		width: 100%;
+		max-width: 500px;
+		margin-inline: auto;
+	}
+
+	.modal-table-col {
+		width: 100%;
+		min-width: 0;
+	}
+
+	/* ─── Chart Card & Inner Elements ─────────────── */
+	.area-chart-card {
+		padding: var(--space-5);
+		border: 1px solid var(--border-default);
+		background: var(--bg-elevated);
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-4);
+	}
+
+	.chart-card-title {
+		font-family: var(--font-display);
+		font-size: var(--text-sm);
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--text-secondary);
+		margin: 0;
+		border-bottom: 1px solid var(--border-subtle);
+		padding-bottom: var(--space-2);
+	}
+
+	.chart-flex {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--space-6);
+	}
+
+	@media (min-width: 480px) {
+		.chart-flex {
+			flex-direction: row;
+			justify-content: center;
+			gap: var(--space-10);
+		}
+	}
+
+	.chart-wrapper {
+		width: 150px;
+		height: 150px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	.pie-svg {
+		width: 100%;
+		height: 100%;
+		transform: rotate(-0.05deg); /* Fix SVG rendering artifacts */
+	}
+
+	.pie-slice {
+		stroke: var(--bg-elevated);
+		stroke-width: 1.5px;
+		transition: opacity 0.2s ease, transform 0.2s ease;
+		cursor: pointer;
+	}
+
+	.pie-slice:hover {
+		opacity: 0.85;
+		transform: scale(1.02);
+		transform-origin: 100px 100px;
+	}
+
+	.chart-legend {
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+	}
+
+	.legend-item {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		font-size: var(--text-xs);
+		line-height: 1.4;
+	}
+
+	.legend-color-indicator {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+
+	.legend-label-name {
+		color: var(--text-secondary);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		flex: 1;
+	}
+
+	.legend-value-val {
+		font-weight: 700;
+		color: var(--text-primary);
+		font-family: var(--font-display);
+		margin-left: auto;
 	}
 </style>

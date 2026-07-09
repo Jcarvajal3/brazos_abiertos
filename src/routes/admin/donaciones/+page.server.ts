@@ -13,7 +13,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	let query = (locals.supabase as any)
 		.from('donations')
 		.select(
-			'id, donor_name, donor_email, is_anonymous, amount, currency, payment_method, payment_status, manual_reference, manual_bank, message, created_at, confirmed_at, admin_notes, area:areas(name, icon, slug), project:projects(name, ong_name)',
+			'id, donor_name, donor_email, is_anonymous, amount, currency, donor_currency, country, payment_method, payment_status, manual_reference, manual_bank, message, created_at, confirmed_at, admin_notes, area:areas(name, icon, slug), project:projects(name, ong_name)',
 			{ count: 'exact' }
 		)
 		.order('created_at', { ascending: false })

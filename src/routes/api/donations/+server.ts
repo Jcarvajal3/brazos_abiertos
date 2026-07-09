@@ -48,28 +48,30 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const data = result.data;
 
-	// ─── Stripe Payment ───────────────────────────────────────────
+	// ─── Stripe Payment (USD or EUR) ──────────────────────────────
 	if (data.payment_method === 'stripe') {
 		const stripe = await getStripe();
 
 		if (!stripe) {
 			return json(
-				{ success: false, error: 'Stripe no está configurado. Por favor usa Pago Móvil o Transferencia Bancaria.' },
+				{ success: false, error: 'Stripe no está configurado. Por favor usa otro método de pago.' },
 				{ status: 503 }
 			);
 		}
 
+		const stripeCurrency = data.currency === 'EUR' ? 'eur' : 'usd';
 		const amountInCents = Math.round(data.amount * 100);
 
 		try {
 			const paymentIntent = await stripe.paymentIntents.create({
 				amount: amountInCents,
-				currency: 'usd',
+				currency: stripeCurrency,
 				metadata: {
 					area_id: data.area_id,
 					project_id: data.project_id ?? '',
-					donor_email: data.donor_email ?? '',
-					donor_name: data.is_anonymous ? 'anonymous' : (data.donor_name ?? 'anonymous')
+					donor_name: data.is_anonymous ? 'anonymous' : (data.donor_name ?? 'anonymous'),
+					country: data.country ?? '',
+					donor_currency: data.donor_currency ?? data.currency
 				},
 				automatic_payment_methods: { enabled: true }
 			});
@@ -81,9 +83,10 @@ export const POST: RequestHandler = async ({ request }) => {
 					area_id: data.area_id,
 					project_id: data.project_id ?? null,
 					donor_name: data.is_anonymous ? null : (data.donor_name ?? null),
-					donor_email: data.donor_email ?? null,
 					amount: data.amount,
-					currency: 'USD',
+					currency: data.currency,
+					donor_currency: data.donor_currency ?? data.currency,
+					country: data.country ?? null,
 					payment_method: 'stripe',
 					payment_status: 'pending',
 					stripe_payment_intent_id: paymentIntent.id,
@@ -124,16 +127,17 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 	}
 
-	// ─── Manual Payment (Pago Móvil / Transferencia) ──────────────
+	// ─── Manual Payments (Pago Móvil / Transferencia / Zelle / Bizum / Crypto) ──
 	const { data: insertedManual, error: dbError } = await supabaseAdmin
 		.from('donations')
 		.insert({
 			area_id: data.area_id,
 			project_id: data.project_id ?? null,
 			donor_name: data.is_anonymous ? null : (data.donor_name ?? null),
-			donor_email: data.donor_email ?? null,
 			amount: data.amount,
 			currency: data.currency,
+			donor_currency: data.donor_currency ?? data.currency,
+			country: data.country ?? null,
 			payment_method: data.payment_method,
 			payment_status: 'pending',
 			manual_reference: data.manual_reference ?? null,

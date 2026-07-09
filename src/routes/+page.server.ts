@@ -1,5 +1,6 @@
 import type { PageServerLoad } from './$types';
-import type { Area, Project } from '$lib/types';
+import type { Area } from '$lib/types';
+import { EUR_TO_USD_RATE, USDT_TO_USD_RATE } from '$lib/utils/constants';
 
 export const load: PageServerLoad = async ({ locals, fetch }) => {
 	// Fetch aggregated donation stats (view)
@@ -17,9 +18,10 @@ export const load: PageServerLoad = async ({ locals, fetch }) => {
 		.maybeSingle();
 
 	// Fetch last 50 confirmed donations for the live feed (supports area filtering)
+	// Include country and donor_currency for multi-currency display
 	const { data: recentDonations } = await locals.supabase
 		.from('donations')
-		.select('id, donor_name, is_anonymous, amount, currency, confirmed_at, message, area:areas(name, icon, slug)')
+		.select('id, donor_name, is_anonymous, amount, currency, donor_currency, country, confirmed_at, message, area:areas(name, icon, color, slug)')
 		.eq('payment_status', 'confirmed')
 		.order('confirmed_at', { ascending: false })
 		.limit(50);
@@ -27,7 +29,7 @@ export const load: PageServerLoad = async ({ locals, fetch }) => {
 	// Fetch recent expenses for the modal detail view (last 50)
 	const { data: recentExpenses } = await locals.supabase
 		.from('expenses')
-		.select('id, concept, description, amount, currency, expense_date, receipt_image_url, receipt_image_urls, vendor, area:areas(name, icon, slug)')
+		.select('id, concept, description, amount, currency, expense_date, receipt_image_url, receipt_image_urls, vendor, area:areas(name, icon, color, slug)')
 		.order('expense_date', { ascending: false })
 		.limit(50);
 
@@ -64,6 +66,8 @@ export const load: PageServerLoad = async ({ locals, fetch }) => {
 		stats: statsData ?? {
 			total_raised_usd: 0,
 			total_raised_ves: 0,
+			total_raised_eur: 0,
+			total_raised_usdt: 0,
 			total_donors: 0,
 			total_donations: 0,
 			last_updated: new Date().toISOString()
@@ -78,6 +82,8 @@ export const load: PageServerLoad = async ({ locals, fetch }) => {
 		recentExpenses: (recentExpenses ?? []) as any[],
 		areas: (areasRaw ?? []) as Area[],
 		featuredProjects: (featuredProjectsRaw ?? []) as any[],
-		bcvRate
+		bcvRate,
+		eurToUsdRate: EUR_TO_USD_RATE,
+		usdtToUsdRate: USDT_TO_USD_RATE
 	};
 };

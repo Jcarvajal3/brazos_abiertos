@@ -5,23 +5,37 @@ import type { DonationCurrency, PaymentMethod } from '$lib/types';
 /**
  * Format a monetary amount based on currency.
  */
-export function formatCurrency(amount: number, currency: DonationCurrency): string {
-	if (currency === 'USD') {
-		return new Intl.NumberFormat('en-US', {
-			style: 'currency',
-			currency: 'USD',
-			minimumFractionDigits: 2,
-			maximumFractionDigits: 2
-		}).format(amount);
-	}
+export function formatCurrency(amount: number, currency: DonationCurrency | string): string {
+	switch (currency) {
+		case 'USD':
+			return new Intl.NumberFormat('en-US', {
+				style: 'currency',
+				currency: 'USD',
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2
+			}).format(amount);
 
-	// Venezuelan Bolívar
-	return new Intl.NumberFormat('es-VE', {
-		style: 'currency',
-		currency: 'VES',
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2
-	}).format(amount);
+		case 'EUR':
+			return new Intl.NumberFormat('de-DE', {
+				style: 'currency',
+				currency: 'EUR',
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2
+			}).format(amount);
+
+		case 'USDT':
+			return `${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDt`;
+
+		case 'VES':
+		default:
+			// Venezuelan Bolívar
+			return new Intl.NumberFormat('es-VE', {
+				style: 'currency',
+				currency: 'VES',
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2
+			}).format(amount);
+	}
 }
 
 /**
@@ -76,9 +90,12 @@ export function getPaymentMethodLabel(method: PaymentMethod): string {
 	const labels: Record<PaymentMethod, string> = {
 		stripe: 'Tarjeta de Crédito/Débito',
 		pago_movil: 'Pago Móvil',
-		transferencia: 'Transferencia Bancaria'
+		transferencia: 'Transferencia Bancaria',
+		zelle: 'Zelle',
+		bizum: 'Bizum',
+		crypto: 'Cripto (USDt)'
 	};
-	return labels[method];
+	return labels[method] ?? method;
 }
 
 // ─── Donation Donor Name ──────────────────────────────────────────────────────

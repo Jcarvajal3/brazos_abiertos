@@ -17,12 +17,18 @@ export const donationSchema = z
 			.max(254)
 			.optional()
 			.transform((v) => v?.trim().toLowerCase() || null),
+		country: z
+			.string()
+			.max(100)
+			.optional()
+			.transform((v) => v?.trim() || null),
 		amount: z
 			.number({ error: 'El monto debe ser un número válido' })
 			.positive('El monto debe ser mayor a cero')
 			.max(100000, 'El monto máximo por donación es 100,000'),
-		currency: z.enum(['USD', 'VES']),
-		payment_method: z.enum(['stripe', 'pago_movil', 'transferencia']),
+		currency: z.enum(['USD', 'VES', 'EUR', 'USDT']),
+		donor_currency: z.enum(['USD', 'VES', 'EUR', 'USDT']).optional(),
+		payment_method: z.enum(['stripe', 'pago_movil', 'transferencia', 'zelle', 'bizum', 'crypto']),
 		is_anonymous: z.boolean().default(false),
 		message: z
 			.string()
@@ -34,18 +40,19 @@ export const donationSchema = z
 		manual_bank: z.string().max(100).optional().transform((v) => v?.trim() || null)
 	})
 	.superRefine((data, ctx) => {
-		// Stripe only accepts USD
-		if (data.payment_method === 'stripe' && data.currency !== 'USD') {
+		// Stripe only accepts USD or EUR
+		if (data.payment_method === 'stripe' && data.currency !== 'USD' && data.currency !== 'EUR') {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
-				message: 'Los pagos con tarjeta solo se aceptan en USD',
+				message: 'Los pagos con tarjeta solo se aceptan en USD o EUR',
 				path: ['currency']
 			});
 		}
 
-		// Manual payments require reference
+		// Manual payments (pago_movil, transferencia, zelle, bizum, crypto) require reference
+		const manualMethods = ['pago_movil', 'transferencia', 'zelle', 'bizum', 'crypto'] as const;
 		if (
-			(data.payment_method === 'pago_movil' || data.payment_method === 'transferencia') &&
+			(manualMethods as readonly string[]).includes(data.payment_method) &&
 			!data.manual_reference
 		) {
 			ctx.addIssue({

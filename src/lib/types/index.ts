@@ -1,10 +1,13 @@
 // ─── Enums & Constants ───────────────────────────────────────────────────────
 
-export type PaymentMethod = 'stripe' | 'pago_movil' | 'transferencia';
+export type PaymentMethod = 'stripe' | 'pago_movil' | 'transferencia' | 'zelle' | 'bizum' | 'crypto';
 export type PaymentStatus = 'pending' | 'confirmed' | 'failed' | 'refunded';
 export type ProjectStatus = 'pending' | 'approved' | 'rejected';
 export type UserRole = 'donor' | 'ong' | 'admin';
-export type DonationCurrency = 'USD' | 'VES';
+export type DonationCurrency = 'USD' | 'VES' | 'EUR' | 'USDT';
+
+// Donor-facing currency selection (the currency the donor chose in the form)
+export type DonorCurrency = 'USD' | 'VES' | 'EUR' | 'USDT';
 
 // ─── Database Row Types ───────────────────────────────────────────────────────
 
@@ -61,6 +64,8 @@ export interface Donation {
 	donor_email: string | null;
 	amount: number;
 	currency: DonationCurrency;
+	donor_currency: DonorCurrency | null; // Original currency chosen by donor
+	country: string | null;               // Donor's country name
 	payment_method: PaymentMethod;
 	payment_status: PaymentStatus;
 	stripe_payment_intent_id: string | null;
@@ -79,6 +84,8 @@ export interface Donation {
 export interface DonationStats {
 	total_raised_usd: number;
 	total_raised_ves: number;
+	total_raised_eur: number;
+	total_raised_usdt: number;
 	total_donors: number;
 	total_donations: number;
 	last_updated: string;

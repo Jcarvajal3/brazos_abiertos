@@ -131,6 +131,7 @@
 					<thead>
 						<tr>
 							<th>Donante</th>
+							<th>País</th>
 							<th>Área / Proyecto</th>
 							<th>Monto</th>
 							<th>Método</th>
@@ -147,6 +148,13 @@
 									<p class="donor-name">{getDonorDisplayName(donation.is_anonymous, donation.donor_name)}</p>
 									{#if donation.donor_email}
 										<p class="donor-email">{donation.donor_email}</p>
+									{/if}
+								</td>
+								<td class="td-country">
+									{#if (donation as any).country}
+										<span class="td-country-val">{(donation as any).country}</span>
+									{:else}
+										<span class="no-ref">—</span>
 									{/if}
 								</td>
 								<td>
@@ -425,6 +433,8 @@
 	.td-amount { font-family: var(--font-display); font-weight: 700; color: var(--blue-600); white-space: nowrap; }
 	.td-method { font-size: var(--text-xs); color: var(--text-secondary); }
 	.td-ref { font-size: var(--text-xs); }
+	.td-country { font-size: var(--text-xs); color: var(--text-secondary); }
+	.td-country-val { white-space: nowrap; }
 	.ref-code { font-family: monospace; background: var(--bg-secondary); padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
 	.no-ref { color: var(--text-muted); }
 	.td-date { font-size: var(--text-xs); color: var(--text-muted); white-space: nowrap; }
