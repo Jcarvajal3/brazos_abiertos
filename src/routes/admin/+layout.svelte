@@ -47,6 +47,7 @@
 		{ href: '/admin',             icon: '📊', label: 'Dashboard',   id: 'nav-dashboard',   badge: 0 },
 		{ href: '/admin/donaciones',  icon: '💳', label: 'Donaciones',  id: 'nav-donaciones',  get badge() { return pendingDonations; } },
 		{ href: '/admin/proyectos',   icon: '🏗️', label: 'Proyectos',   id: 'nav-proyectos',   get badge() { return pendingProjects; } },
+		{ href: '/admin/egresos',     icon: '💸', label: 'Egresos',     id: 'nav-egresos',     badge: 0 },
 		{ href: '/',                  icon: '🌐', label: 'Ver sitio',   id: 'nav-sitio',       badge: 0 },
 	];
 

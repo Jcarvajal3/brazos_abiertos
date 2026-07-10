@@ -3,7 +3,7 @@ import { redirect } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	// Aggregate stats for dashboard
-	const [statsRes, pendingDonationsRes, pendingProjectsRes, recentActivityRes] = await Promise.all([
+	const [statsRes, pendingDonationsRes, pendingProjectsRes, recentActivityRes, expenseStatsRes] = await Promise.all([
 		// Total stats
 		locals.supabase.from('donation_stats').select('*').limit(1).maybeSingle(),
 
@@ -25,7 +25,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.from('donations')
 			.select('id, donor_name, is_anonymous, amount, currency, payment_method, payment_status, created_at, area:areas(name, icon)')
 			.order('created_at', { ascending: false })
-			.limit(10)
+			.limit(10),
+
+		// Expense stats
+		locals.supabase
+			.from('expense_stats')
+			.select('*')
+			.limit(1)
+			.maybeSingle()
 	]);
 
 	// Donations by status breakdown
@@ -55,7 +62,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		pendingDonations: pendingDonationsRes.count ?? 0,
 		pendingProjects: pendingProjectsRes.count ?? 0,
 		recentActivity: (recentActivityRes.data ?? []) as any[],
-		breakdown
+		breakdown,
+		expenseStats: (expenseStatsRes.data as any) ?? { total_expenses_usd: 0, total_expenses_ves: 0, total_expense_records: 0 }
 	};
 };
 

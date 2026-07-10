@@ -23,6 +23,22 @@
 			sub: 'Pago móvil y transferencia'
 		},
 		{
+			label: 'Egresos totales (USD)',
+			value: `$${Number(data.expenseStats.total_expenses_usd).toLocaleString('en-US', { minimumFractionDigits: 0 })}`,
+			icon: '💸',
+			color: '#ef4444',
+			sub: 'Salidas y pagos registrados',
+			href: '/admin/egresos'
+		},
+		{
+			label: 'Egresos totales (VES)',
+			value: `Bs.${Number(data.expenseStats.total_expenses_ves).toLocaleString('es-VE', { minimumFractionDigits: 0 })}`,
+			icon: '💸',
+			color: '#f97316',
+			sub: 'Salidas y pagos en Bs.',
+			href: '/admin/egresos'
+		},
+		{
 			label: 'Donaciones pendientes',
 			value: String(data.pendingDonations),
 			icon: '⏳',

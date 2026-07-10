@@ -6,6 +6,8 @@
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
 	import { formatCurrency, formatDateTime } from '$lib/utils/formatters';
 	import { getAreaIconName } from '$lib/utils/iconMap';
+	import { createSupabaseClient } from '$lib/supabase';
+	import { toast } from '$lib/stores/toast';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -50,10 +52,101 @@
 		rejectionReason = '';
 	}
 
+	// Create Project Form States
+	let showCreateModal = $state(false);
+	let name = $state('');
+	let description = $state('');
+	let ongName = $state('');
+	let ongContactEmail = $state('');
+	let ongPhone = $state('');
+	let ongDocument = $state('');
+	let areaId = $state('');
+	let goalAmount = $state('');
+	let websiteUrl = $state('');
+	let coverImageUrl = $state('');
+
+	let uploadProgress = $state(0);
+	let isUploading = $state(false);
+	let uploadError = $state<string | null>(null);
+
+	const supabase = createSupabaseClient();
+
+	function openCreateModal() {
+		name = '';
+		description = '';
+		ongName = '';
+		ongContactEmail = '';
+		ongPhone = '';
+		ongDocument = '';
+		areaId = data.areas[0]?.id || '';
+		goalAmount = '';
+		websiteUrl = '';
+		coverImageUrl = '';
+		uploadProgress = 0;
+		isUploading = false;
+		uploadError = null;
+		showCreateModal = true;
+	}
+
+	function closeCreateModal() {
+		showCreateModal = false;
+	}
+
+	async function handleCoverUpload(event: Event) {
+		const input = event.target as HTMLInputElement;
+		if (!input.files || input.files.length === 0) return;
+
+		isUploading = true;
+		uploadError = null;
+		uploadProgress = 10;
+		
+		const file = input.files[0];
+
+		if (!file.type.startsWith('image/')) {
+			toast.error('Archivo no admitido', 'El archivo debe ser una imagen.');
+			isUploading = false;
+			return;
+		}
+		if (file.size > 10 * 1024 * 1024) {
+			toast.error('Archivo muy grande', 'La imagen no debe superar los 10MB.');
+			isUploading = false;
+			return;
+		}
+
+		const fileId = crypto.randomUUID();
+		const fileExt = file.name.split('.').pop();
+		const filePath = `${fileId}.${fileExt}`;
+
+		try {
+			const { error } = await supabase.storage
+				.from('projects')
+				.upload(filePath, file, {
+					cacheControl: '3600',
+					upsert: false
+				});
+
+			if (error) throw error;
+
+			const { data: { publicUrl } } = supabase.storage
+				.from('projects')
+				.getPublicUrl(filePath);
+
+			coverImageUrl = publicUrl;
+			uploadProgress = 100;
+		} catch (e: any) {
+			console.error('Error uploading file:', e);
+			uploadError = 'Error al subir la imagen.';
+			toast.error('Error de carga', 'No se pudo subir la imagen.');
+		} finally {
+			isUploading = false;
+		}
+	}
+
 	$effect(() => {
 		if (form?.success) {
 			activeModal = null;
 			rejectionReason = '';
+			showCreateModal = false;
 		}
 	});
 </script>
@@ -68,6 +161,9 @@
 			<h1 class="page-title">Proyectos</h1>
 			<p class="page-subtitle">{data.count} {data.count === 1 ? 'proyecto' : 'proyectos'} encontrados</p>
 		</div>
+		<button class="btn btn-primary btn-sm" onclick={openCreateModal}>
+			<span>➕</span> Agregar Proyecto
+		</button>
 	</div>
 
 	<!-- Action feedback -->
@@ -318,6 +414,216 @@
 					</div>
 				{/if}
 			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Create Project Modal -->
+{#if showCreateModal}
+	<div class="modal-backdrop" onclick={closeCreateModal} role="presentation">
+		<div class="modal-box" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="create-proj-title">
+			<div class="modal-header">
+				<h2 id="create-proj-title" class="modal-title">Agregar Proyecto</h2>
+				<button class="modal-close" onclick={closeCreateModal} aria-label="Cerrar">×</button>
+			</div>
+
+			<form
+				method="POST"
+				action="?/addProject"
+				use:enhance={() => {
+					submitting = true;
+					return async ({ result, update }) => {
+						submitting = false;
+						if (result.type === 'success') {
+							showCreateModal = false;
+							toast.success('Proyecto registrado', 'El proyecto ha sido registrado y publicado.');
+							await update();
+						} else if (result.type === 'failure') {
+							const errMessage = (result.data as any)?.error || 'Error desconocido';
+							toast.error('Error al registrar', errMessage);
+						}
+					};
+				}}
+				class="modal-body"
+			>
+				<input type="hidden" name="cover_image_url" value={coverImageUrl} />
+
+				<div class="form-group">
+					<label class="form-label" for="proj-name">Nombre del Proyecto <span class="required">*</span></label>
+					<input
+						type="text"
+						id="proj-name"
+						name="name"
+						class="form-input"
+						placeholder="Ej: Reconstrucción de comedor popular"
+						bind:value={name}
+						required
+					/>
+				</div>
+
+				<div class="form-group">
+					<label class="form-label" for="proj-ong">Organización (ONG) <span class="required">*</span></label>
+					<input
+						type="text"
+						id="proj-ong"
+						name="ong_name"
+						class="form-input"
+						placeholder="Ej: Brazos Abiertos A.C."
+						bind:value={ongName}
+						required
+					/>
+				</div>
+
+				<div class="form-row-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+					<div class="form-group">
+						<label class="form-label" for="proj-email">Correo de Contacto <span class="required">*</span></label>
+						<input
+							type="email"
+							id="proj-email"
+							name="ong_contact_email"
+							class="form-input"
+							placeholder="ejemplo@ong.org"
+							bind:value={ongContactEmail}
+							required
+						/>
+					</div>
+
+					<div class="form-group">
+						<label class="form-label" for="proj-phone">Teléfono de Contacto</label>
+						<input
+							type="text"
+							id="proj-phone"
+							name="ong_phone"
+							class="form-input"
+							placeholder="Ej: +58 412-1234567"
+							bind:value={ongPhone}
+						/>
+					</div>
+				</div>
+
+				<div class="form-row-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+					<div class="form-group">
+						<label class="form-label" for="proj-doc">RIF / RUM / Documento</label>
+						<input
+							type="text"
+							id="proj-doc"
+							name="ong_document"
+							class="form-input"
+							placeholder="Ej: J-12345678-9"
+							bind:value={ongDocument}
+						/>
+					</div>
+
+					<div class="form-group">
+						<label class="form-label" for="proj-web">Sitio Web (URL)</label>
+						<input
+							type="url"
+							id="proj-web"
+							name="website_url"
+							class="form-input"
+							placeholder="https://tu-ong.org"
+							bind:value={websiteUrl}
+						/>
+					</div>
+				</div>
+
+				<div class="form-row-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+					<div class="form-group">
+						<label class="form-label" for="proj-area">Área / Categoría <span class="required">*</span></label>
+						<select id="proj-area" name="area_id" class="form-select" bind:value={areaId} required>
+							<option value="" disabled>Selecciona un área</option>
+							{#each data.areas as area}
+								<option value={area.id}>{area.icon} {area.name}</option>
+							{/each}
+						</select>
+					</div>
+
+					<div class="form-group">
+						<label class="form-label" for="proj-goal">Meta de Recaudación (USD)</label>
+						<input
+							type="number"
+							id="proj-goal"
+							name="goal_amount"
+							class="form-input"
+							placeholder="Ej: 10000 (dejar vacío si no aplica)"
+							bind:value={goalAmount}
+						/>
+					</div>
+				</div>
+
+				<div class="form-group">
+					<label class="form-label" for="proj-desc">Descripción del Proyecto <span class="required">*</span></label>
+					<textarea
+						id="proj-desc"
+						name="description"
+						class="form-textarea"
+						rows="4"
+						placeholder="Escribe aquí los detalles del proyecto..."
+						bind:value={description}
+						required
+					></textarea>
+				</div>
+
+				<!-- Cover Image Upload -->
+				<div class="form-group" style="background: var(--bg-secondary); padding: var(--space-4); border-radius: 8px; border: 1px dashed var(--border-default);">
+					<span class="form-label">Imagen de Portada (Opcional)</span>
+					<div style="position: relative; display: flex; justify-content: center; align-items: center; padding: var(--space-4); border: 2px dashed var(--border-default); border-radius: 6px; background: #ffffff; cursor: pointer; text-align: center;">
+						<input
+							type="file"
+							id="cover-file"
+							accept="image/*"
+							style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;"
+							onclick={(e) => {
+								// Prevent form submission
+							}}
+							onchange={handleCoverUpload}
+						/>
+						<label for="cover-file" style="display: flex; flex-direction: column; align-items: center; gap: var(--space-1); cursor: pointer;">
+							<span style="font-size: 1.5rem;">🖼️</span>
+							<span style="font-size: var(--text-sm); font-weight: 600; color: var(--blue-600);">Haga clic para subir portada</span>
+							<span style="font-size: var(--text-xs); color: var(--text-muted);">Admite JPG, PNG, WEBP hasta 10MB</span>
+						</label>
+					</div>
+
+					{#if isUploading}
+						<div style="font-size: var(--text-xs); font-weight: 500; margin-top: var(--space-2); color: var(--blue-600);">Subiendo imagen...</div>
+					{/if}
+
+					{#if uploadError}
+						<div style="font-size: var(--text-xs); font-weight: 500; margin-top: var(--space-2); color: #dc2626;">{uploadError}</div>
+					{/if}
+
+					{#if coverImageUrl}
+						<div style="display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-3); padding: var(--space-2); border: 1px solid var(--border-subtle); border-radius: 6px; background: #ffffff;">
+							<img src={coverImageUrl} alt="Vista previa de portada" style="width: 60px; height: 40px; object-fit: cover; border-radius: 4px;" />
+							<span style="font-size: var(--text-xs); color: var(--text-secondary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; flex: 1;">Imagen cargada</span>
+							<button
+								type="button"
+								style="background: none; border: none; font-size: 1.2rem; color: #dc2626; cursor: pointer; padding: 0 var(--space-2);"
+								onclick={() => coverImageUrl = ''}
+								title="Remover"
+							>
+								×
+							</button>
+						</div>
+					{/if}
+				</div>
+
+				<div class="modal-actions" style="display: flex; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-2); padding-top: var(--space-4); border-top: 1px solid var(--border-subtle)">
+					<button type="button" class="btn btn-outline" onclick={closeCreateModal}>Cancelar</button>
+					<button
+						type="submit"
+						class="btn btn-primary"
+						disabled={submitting || isUploading}
+					>
+						{#if submitting}
+							Guardando...
+						{:else}
+							Guardar y Publicar
+						{/if}
+					</button>
+				</div>
+			</form>
 		</div>
 	</div>
 {/if}

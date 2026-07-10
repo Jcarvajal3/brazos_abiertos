@@ -22,7 +22,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		query = query.eq('status', statusFilter);
 	}
 
-	const { data: projects, count } = await query;
+	const [projectsRes, areasRes] = await Promise.all([
+		query,
+		locals.supabase
+			.from('areas')
+			.select('id, name, icon, color, slug')
+			.eq('active', true)
+			.order('sort_order')
+	]);
+
+	const { data: projects, count } = projectsRes;
 	const totalPages = Math.ceil((count ?? 0) / limit);
 
 	return {
@@ -30,7 +39,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		count: count ?? 0,
 		totalPages,
 		page,
-		statusFilter
+		statusFilter,
+		areas: (areasRes.data ?? []) as any[]
 	};
 };
 
@@ -78,5 +88,61 @@ export const actions: Actions = {
 		}
 
 		return fail(400, { error: 'Acción no válida' });
+	},
+
+	addProject: async ({ request, locals }) => {
+		const session = await locals.safeGetSession();
+		if (!session.user) {
+			return fail(401, { error: 'No autorizado' });
+		}
+
+		const formData = await request.formData();
+		const name = formData.get('name') as string;
+		const description = formData.get('description') as string;
+		const ong_name = formData.get('ong_name') as string;
+		const ong_contact_email = formData.get('ong_contact_email') as string;
+		const ong_phone = formData.get('ong_phone') as string;
+		const ong_document = formData.get('ong_document') as string;
+		const area_id = formData.get('area_id') as string;
+		const goal_amount_str = formData.get('goal_amount') as string;
+		const website_url = formData.get('website_url') as string;
+		const cover_image_url = formData.get('cover_image_url') as string;
+
+		// Validation
+		if (!name || name.trim() === '') return fail(400, { error: 'El nombre del proyecto es requerido' });
+		if (!description || description.trim() === '') return fail(400, { error: 'La descripción es requerida' });
+		if (!ong_name || ong_name.trim() === '') return fail(400, { error: 'El nombre de la organización (ONG) es requerido' });
+		if (!ong_contact_email || ong_contact_email.trim() === '') return fail(400, { error: 'El correo de contacto es requerido' });
+		if (!area_id) return fail(400, { error: 'El área es requerida' });
+
+		const goal_amount = goal_amount_str ? Number(goal_amount_str) : null;
+		if (goal_amount !== null && (isNaN(goal_amount) || goal_amount <= 0)) {
+			return fail(400, { error: 'La meta de recaudación debe ser un número mayor a 0' });
+		}
+
+		const { error: insertError } = await (supabaseAdmin as any)
+			.from('projects')
+			.insert({
+				name: name.trim(),
+				description: description.trim(),
+				ong_name: ong_name.trim(),
+				ong_contact_email: ong_contact_email.trim(),
+				ong_phone: ong_phone ? ong_phone.trim() : null,
+				ong_document: ong_document ? ong_document.trim() : null,
+				area_id,
+				goal_amount,
+				current_amount: 0,
+				website_url: website_url ? website_url.trim() : null,
+				cover_image_url: cover_image_url ? cover_image_url.trim() : null,
+				status: 'approved',
+				approved_at: new Date().toISOString()
+			} as any);
+
+		if (insertError) {
+			console.error('Error inserting project:', insertError);
+			return fail(500, { error: `Error al crear el proyecto: ${insertError.message}` });
+		}
+
+		return { success: true, message: 'Proyecto creado y publicado exitosamente' };
 	}
 };

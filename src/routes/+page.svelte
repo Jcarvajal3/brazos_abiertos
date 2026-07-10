@@ -36,6 +36,17 @@
 		) + (stats.total_raised_ves ?? 0)
 	);
 
+	// total_expenses_usd = USD + VES/bcvRate
+	const totalExpensesUsd = $derived(
+		(expenseStats.total_expenses_usd ?? 0)
+		+ (data.bcvRate ? (expenseStats.total_expenses_ves ?? 0) / data.bcvRate : 0)
+	);
+	// total_expenses_ves = USD*bcv + VES
+	const totalExpensesVes = $derived(
+		(data.bcvRate ?? 1) * (expenseStats.total_expenses_usd ?? 0)
+		+ (expenseStats.total_expenses_ves ?? 0)
+	);
+
 	// UI state
 	let showIncomeModal = $state(false);
 	let showExpenseModal = $state(false);
@@ -384,15 +395,15 @@
 					<span class="finance-label">Egresos totales</span>
 					<span class="finance-amount finance-amount-expense">
 						$<AnimatedCounter
-							value={expenseStats.total_expenses_usd}
-							format={(v) => Math.round(v).toLocaleString('en-US')}
+							value={totalExpensesUsd}
+							format={(v) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
 						/>
 					</span>
-					{#if expenseStats.total_expenses_ves > 0}
+					{#if data.bcvRate}
 						<span class="finance-secondary">
 							Bs.<AnimatedCounter
-								value={expenseStats.total_expenses_ves}
-								format={(v) => Math.round(v).toLocaleString('es-VE')}
+								value={totalExpensesVes}
+								format={(v) => v.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
 							/>
 						</span>
 					{/if}
