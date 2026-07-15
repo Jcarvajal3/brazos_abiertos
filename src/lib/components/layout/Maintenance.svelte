@@ -8,8 +8,9 @@
 
 	<div class="maintenance-card">
 		<div class="icon-container">
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="maintenance-icon">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.42 15.17L17.25 21A2.67 2.67 0 1021 17.25l-5.83-5.83m-3.75 3.75a3.75 3.75 0 11-5.3-5.3 3.75 3.75 0 015.3 5.3zm0 0l-5.83 5.83m5.83-5.83V9m0 6.17H9m1.5-6.17a3.75 3.75 0 10-5.3-5.3 3.75 3.75 0 005.3 5.3zm0 0L15 3.75M10.5 9h6.17m-6.17 0V2.83" />
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="maintenance-icon">
+				<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+				<circle cx="12" cy="12" r="3" />
 			</svg>
 			<div class="pulse-ring"></div>
 		</div>
@@ -98,7 +99,7 @@
 		width: 44px;
 		height: 44px;
 		color: var(--blue-300);
-		animation: wrench-wiggle 4s ease-in-out infinite;
+		animation: gear-spin 8s linear infinite;
 		z-index: 2;
 	}
 
@@ -151,24 +152,12 @@
 		}
 	}
 
-	@keyframes wrench-wiggle {
-		0%, 100% {
+	@keyframes gear-spin {
+		from {
 			transform: rotate(0deg);
 		}
-		10% {
-			transform: rotate(8deg);
-		}
-		20% {
-			transform: rotate(-6deg);
-		}
-		30% {
-			transform: rotate(4deg);
-		}
-		40% {
-			transform: rotate(-2deg);
-		}
-		50% {
-			transform: rotate(0deg);
+		to {
+			transform: rotate(360deg);
 		}
 	}
 
