@@ -15,26 +15,6 @@
 		</div>
 
 		<h1 class="title">Web fuera de servicio</h1>
-		
-		<p class="subtitle">
-			En <strong>Brazos Abiertos</strong> estamos realizando labores de mantenimiento y optimización técnica para ofrecerte una plataforma de donaciones más rápida, segura y confiable.
-		</p>
-
-		<div class="divider"></div>
-
-		<p class="info-text">
-			Agradecemos enormemente tu paciencia y solidaridad. Estaremos de vuelta muy pronto para seguir apoyando a quienes más lo necesitan.
-		</p>
-
-		<div class="contact-section">
-			<span class="contact-title">¿Necesitas contactarnos?</span>
-			<div class="contact-links">
-				<a href="mailto:contacto@brazosabiertos.org" class="contact-link">
-					<span class="material-symbols-outlined">mail</span>
-					contacto@brazosabiertos.org
-				</a>
-			</div>
-		</div>
 	</div>
 </div>
 
@@ -139,82 +119,12 @@
 		font-family: var(--font-display);
 		font-size: var(--text-4xl);
 		font-weight: 800;
-		margin: 0 0 var(--space-4) 0;
+		margin: 0;
 		color: #ffffff;
 		letter-spacing: -0.02em;
 		background: linear-gradient(135deg, #ffffff 40%, var(--blue-100) 100%);
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
-	}
-
-	.subtitle {
-		font-size: var(--text-lg);
-		line-height: 1.6;
-		color: var(--navy-200);
-		margin: 0 0 var(--space-6) 0;
-	}
-
-	.subtitle strong {
-		color: #ffffff;
-		font-weight: 600;
-	}
-
-	.divider {
-		height: 1px;
-		background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1) 20%, rgba(255, 255, 255, 0.1) 80%, transparent);
-		margin: var(--space-6) 0;
-	}
-
-	.info-text {
-		font-size: var(--text-base);
-		line-height: 1.6;
-		color: var(--navy-300);
-		margin-bottom: var(--space-8);
-	}
-
-	.contact-section {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: var(--space-2);
-	}
-
-	.contact-title {
-		font-size: var(--text-xs);
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
-		color: var(--blue-400);
-		font-weight: 700;
-	}
-
-	.contact-links {
-		display: flex;
-		gap: var(--space-4);
-	}
-
-	.contact-link {
-		display: inline-flex;
-		align-items: center;
-		gap: var(--space-2);
-		color: var(--blue-200);
-		text-decoration: none;
-		font-size: var(--text-sm);
-		padding: var(--space-2) var(--space-4);
-		background: rgba(255, 255, 255, 0.03);
-		border: 1px solid rgba(255, 255, 255, 0.05);
-		border-radius: var(--radius-btn);
-		transition: all var(--duration-normal) var(--ease-out);
-	}
-
-	.contact-link:hover {
-		color: #ffffff;
-		background: rgba(20, 96, 154, 0.2);
-		border-color: rgba(20, 96, 154, 0.4);
-		transform: translateY(-2px);
-	}
-
-	.contact-link .material-symbols-outlined {
-		font-size: 1.2rem;
 	}
 
 	/* Animations */
@@ -280,9 +190,6 @@
 		}
 		.title {
 			font-size: var(--text-3xl);
-		}
-		.subtitle {
-			font-size: var(--text-base);
 		}
 	}
 </style>
